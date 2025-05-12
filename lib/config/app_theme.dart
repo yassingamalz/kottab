@@ -23,7 +23,6 @@ class AppColors {
   static const Color border = Color(0xFFE5E7EB);
   static const Color divider = Color(0xFFF3F4F6);
 }
-
 class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
