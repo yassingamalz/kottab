@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:kottab/config/app_colors.dart';
-import 'package:kottab/providers/schedule_provider.dart';
-import 'package:kottab/widgets/schedule/day_schedule.dart';
-import 'package:kottab/widgets/schedule/settings_item.dart';
+import '../config/app_colors.dart';
+import '../widgets/schedule/settings_item.dart';
+import '../providers/schedule_provider.dart' as scheduleData;
+import '../widgets/schedule/day_schedule.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -18,7 +18,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     super.initState();
     // Initialize data when screen is first loaded
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ScheduleProvider>(context, listen: false).refreshData();
+      Provider.of<scheduleData.ScheduleProvider>(context, listen: false).refreshData();
     });
   }
 
@@ -26,7 +26,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Consumer<ScheduleProvider>(
+      child: Consumer<scheduleData.ScheduleProvider>(
         builder: (context, scheduleProvider, child) {
           if (scheduleProvider.isLoading) {
             return _buildLoadingState();
@@ -46,7 +46,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   /// Build schedule content
-  Widget _buildScheduleContent(ScheduleProvider provider) {
+  Widget _buildScheduleContent(scheduleData.ScheduleProvider provider) {
     return RefreshIndicator(
       onRefresh: () => provider.refreshData(),
       child: SingleChildScrollView(

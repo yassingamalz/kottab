@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
 
+import '../../config/app_theme.dart';
+
 class AchievementItem extends StatelessWidget {
   final IconData icon;
   final String title;

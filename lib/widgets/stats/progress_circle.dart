@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
 import 'package:kottab/utils/arabic_numbers.dart';
 
+import '../../config/app_theme.dart';
+
 class ProgressCircle extends StatefulWidget {
   final double percentage;
   final String centerText;

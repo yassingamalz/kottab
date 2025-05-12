@@ -4,6 +4,8 @@ import 'package:kottab/models/surah_model.dart';
 import 'package:kottab/utils/arabic_numbers.dart';
 import 'package:kottab/widgets/surahs/verse_set_card.dart';
 
+import '../../config/app_theme.dart';
+
 class SurahCard extends StatelessWidget {
   final Surah surah;
   final bool isExpanded;
@@ -148,7 +150,7 @@ class SurahCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         border: Border.all(
                           color: Colors.grey.shade300,
-                          style: BorderStyle.dashed,
+                          style: BorderStyle.solid,
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),

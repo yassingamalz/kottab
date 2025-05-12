@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
-import 'package:kottab/utils/arabic_numbers.dart';
-import 'package:kottab/utils/date_formatter.dart';
+
 import 'package:kottab/widgets/home/hero_section.dart';
 import 'package:kottab/widgets/home/weekly_progress.dart';
 import 'package:kottab/widgets/home/focus_card.dart';

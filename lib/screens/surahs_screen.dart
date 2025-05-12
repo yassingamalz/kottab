@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:kottab/config/app_colors.dart';
 import 'package:kottab/models/verse_set_model.dart';
 import 'package:kottab/providers/quran_provider.dart';
 import 'package:kottab/widgets/surahs/surah_card.dart';
+import '../config/app_colors.dart';
 
 class SurahsScreen extends StatefulWidget {
   const SurahsScreen({super.key});

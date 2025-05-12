@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
-import 'package:kottab/providers/schedule_provider.dart';
 import 'package:kottab/utils/date_formatter.dart';
 import 'package:kottab/widgets/schedule/session_card.dart';
+import '../../providers/schedule_provider.dart' as ScheduleProvider;
 
 class DaySchedule extends StatelessWidget {
   final ScheduleProvider.DaySchedule day;

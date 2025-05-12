@@ -1,28 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class AppColors {
-  // Primary
-  static const Color primary = Color(0xFF059669);
-  static const Color primaryLight = Color(0xFFD1FAE5);
+import 'app_colors.dart';
 
-  // Secondary colors
-  static const Color blue = Color(0xFF2563EB);
-  static const Color blueLight = Color(0xFFE0F2FE);
-  static const Color purple = Color(0xFF7C3AED);
-  static const Color purpleLight = Color(0xFFF3E8FF);
-  static const Color amber = Color(0xFFF59E0B);
-  static const Color amberLight = Color(0xFFFEF3C7);
-
-  // Neutrals
-  static const Color background = Color(0xFFF9FAFB);
-  static const Color card = Colors.white;
-  static const Color textPrimary = Color(0xFF111827);
-  static const Color textSecondary = Color(0xFF6B7280);
-  static const Color textTertiary = Color(0xFF9CA3AF);
-  static const Color border = Color(0xFFE5E7EB);
-  static const Color divider = Color(0xFFF3F4F6);
-}
 class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
 import 'package:kottab/utils/date_formatter.dart';
 
+import '../../config/app_theme.dart';
+
 enum ActivityType {
   memorization,
   review,

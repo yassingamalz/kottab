@@ -8,6 +8,8 @@ import 'package:kottab/widgets/stats/weekly_pattern.dart';
 import 'package:kottab/widgets/stats/stats_section.dart';
 import 'package:kottab/widgets/stats/milestone_card.dart';
 
+import '../config/app_theme.dart';
+
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
 

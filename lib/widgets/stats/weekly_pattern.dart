@@ -3,6 +3,8 @@ import 'package:kottab/config/app_colors.dart';
 import 'package:kottab/utils/arabic_numbers.dart';
 import 'package:kottab/utils/date_formatter.dart';
 
+import '../../config/app_theme.dart';
+
 class WeeklyPattern extends StatelessWidget {
   final List<MapEntry<String, int>> weekData;
   final int maxValue;
