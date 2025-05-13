@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
 import 'package:kottab/utils/arabic_numbers.dart';
 
-import '../../config/app_theme.dart';
-
 class StatCard extends StatelessWidget {
   final String title;
   final String value;
@@ -65,10 +63,14 @@ class StatCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
+                  // Constrain the text to prevent overflow
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -76,10 +78,8 @@ class StatCard extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              // Value with suffix
+              // Value with suffix - explicitly managed for RTL
               Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
                 children: [
                   Text(
                     value,
@@ -99,11 +99,15 @@ class StatCard extends StatelessWidget {
 
               const SizedBox(height: 4),
 
-              // Description
-              Text(
-                description,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
+              // Description - constrained to prevent overflow
+              SizedBox(
+                height: 20, // Fixed height
+                child: Text(
+                  description,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -112,7 +116,7 @@ class StatCard extends StatelessWidget {
           // Progress indicator circle at top right
           Positioned(
             top: 0,
-            right: 0,
+            left: 0, // Changed from right to left for RTL layout
             child: SizedBox(
               width: 24,
               height: 24,
