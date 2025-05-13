@@ -37,10 +37,20 @@ class AchievementRow extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // Achievement items
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: achievements.map((achievement) => _buildAchievementItem(context, achievement)).toList(),
+          // Achievement items - now using a GridView for better spacing and alignment
+          GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 0.8,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+            ),
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: achievements.length,
+            itemBuilder: (context, index) {
+              return _buildAchievementItem(context, achievements[index]);
+            },
           ),
         ],
       ),
@@ -49,10 +59,12 @@ class AchievementRow extends StatelessWidget {
 
   Widget _buildAchievementItem(BuildContext context, AchievementItem achievement) {
     return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        // Icon with circle background
         Container(
-          width: 48,
-          height: 48,
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
             color: AppColors.primaryLight,
             shape: BoxShape.circle,
@@ -60,12 +72,13 @@ class AchievementRow extends StatelessWidget {
           child: Icon(
             achievement.icon,
             color: AppColors.primary,
-            size: 24,
+            size: 28,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
+        // Title text with fixed width
         SizedBox(
-          width: 80,
+          width: 90,
           child: Text(
             achievement.title,
             style: Theme.of(context).textTheme.bodySmall,

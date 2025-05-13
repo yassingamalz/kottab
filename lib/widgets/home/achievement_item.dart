@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
 
-import '../../config/app_theme.dart';
-
 class AchievementItem extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -20,11 +18,12 @@ class AchievementItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         // Icon with background
         Container(
-          width: 48,
-          height: 48,
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
             color: bgColor,
             shape: BoxShape.circle,
@@ -32,19 +31,24 @@ class AchievementItem extends StatelessWidget {
           child: Icon(
             icon,
             color: color,
-            size: 24,
+            size: 28,
           ),
         ),
 
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
 
-        // Title
-        Text(
-          title,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppColors.textPrimary,
+        // Title with fixed width to prevent overflow
+        SizedBox(
+          width: 90,
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          textAlign: TextAlign.center,
         ),
       ],
     );
