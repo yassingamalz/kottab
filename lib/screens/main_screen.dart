@@ -10,6 +10,8 @@ import 'package:kottab/widgets/navigation/app_drawer.dart';
 import 'package:kottab/widgets/sessions/add_session_modal.dart';
 import 'package:kottab/widgets/splash_screen.dart';
 
+import '../config/app_colors.dart';
+
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -91,6 +93,8 @@ class _MainScreenState extends State<MainScreen> {
             _currentIndex = index;
           });
         },
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.menu_book),
@@ -111,8 +115,9 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.primary,
         onPressed: () => _showAddSessionModal(context),
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
