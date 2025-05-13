@@ -168,64 +168,56 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
               child: AnimatedBuilder(
                 animation: _animationController,
                 builder: (context, child) {
-                  return Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Outer ring - Old review
-                      SizedBox(
-                        width: 180,
-                        height: 180,
-                        child: CircleProgress(
+                  return SizedBox(
+                    height: 200, // Fixed height to contain all circles
+                    width: 200, // Fixed width to contain all circles
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Outer ring - Old review
+                        CircleProgress(
                           progress: _oldReviewAnimation.value,
                           color: AppColors.tertiary,
                           size: 180,
                           strokeWidth: 8,
                         ),
-                      ),
-                      
-                      // Middle ring - Recent review
-                      SizedBox(
-                        width: 150,
-                        height: 150,
-                        child: CircleProgress(
+                        
+                        // Middle ring - Recent review
+                        CircleProgress(
                           progress: _recentReviewAnimation.value,
                           color: AppColors.secondary,
                           size: 150,
                           strokeWidth: 8,
                         ),
-                      ),
-                      
-                      // Inner ring - New memorization
-                      SizedBox(
-                        width: 120,
-                        height: 120,
-                        child: CircleProgress(
+                        
+                        // Inner ring - New memorization
+                        CircleProgress(
                           progress: _newMemAnimation.value,
                           color: AppColors.primary,
                           size: 120,
                           strokeWidth: 8,
                         ),
-                      ),
-                      
-                      // Center text
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            ArabicNumbers.formatPercentage(_getOverallProgress()),
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                        
+                        // Center text
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              ArabicNumbers.formatPercentage(_getOverallProgress()),
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                          Text(
-                            'الإنجاز',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSecondary,
+                            Text(
+                              'الإنجاز',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   );
                 },
               ),
@@ -233,8 +225,8 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
           ),
           
           // Activity summaries
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
+          SizedBox(
+            height: 100, // Fixed height to prevent overflow
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -284,6 +276,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
     required String label,
   }) {
     return Column(
+      mainAxisSize: MainAxisSize.min, // Ensure the column uses minimum required space
       children: [
         Container(
           width: 40,

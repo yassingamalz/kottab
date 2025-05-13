@@ -28,7 +28,7 @@ class WeeklyDetailScreen extends StatelessWidget {
               
               // Weekly chart visualization
               Container(
-                height: 200,
+                height: 220, // Increased height to prevent overflow
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -166,6 +166,7 @@ class WeeklyDetailScreen extends StatelessWidget {
             child: Icon(
               icon,
               color: color,
+              size: 24,
             ),
           ),
           const SizedBox(width: 16),
