@@ -86,11 +86,14 @@ class SessionProvider extends ChangeNotifier {
       // Load surahs for session creation
       _surahs = await _memorizationService.getSurahsWithProgress();
 
-      // TODO: In a real app, we would load recent sessions from storage
+      // In a real app, we would load recent sessions from storage
       // For now, create some sample data
       _recentSessions = _createSampleSessions();
     } catch (e) {
       print('Error loading session data: $e');
+      // Create empty lists to avoid null errors
+      _surahs = [];
+      _recentSessions = [];
     }
 
     _isLoading = false;
@@ -119,6 +122,14 @@ class SessionProvider extends ChangeNotifier {
     int surahId = 1,
     SessionType type = SessionType.newMemorization,
   }) {
+    if (_surahs.isEmpty) {
+      // No surahs available, load data first
+      _loadData().then((_) {
+        startNewSession(surahId: surahId, type: type);
+      });
+      return;
+    }
+
     // Find the surah
     final surah = _surahs.firstWhere(
           (s) => s.id == surahId,
@@ -175,10 +186,21 @@ class SessionProvider extends ChangeNotifier {
       orElse: () => _surahs.first,
     );
 
+    // Reset verse range to valid values for this surah
+    int startVerse = 1;
+    int endVerse = startVerse + 4; // Default to 5 verses
+    
+    // Make sure we don't exceed the surah's verse count
+    if (endVerse > surah.verseCount) {
+      endVerse = surah.verseCount;
+    }
+
     // Update the current session
     _currentSession = _currentSession!.copyWith(
       surahId: surah.id,
       surahName: surah.arabicName,
+      startVerse: startVerse,
+      endVerse: endVerse,
     );
 
     notifyListeners();
@@ -195,6 +217,25 @@ class SessionProvider extends ChangeNotifier {
   /// Update the current session verse range
   void updateSessionVerseRange(int startVerse, int endVerse) {
     if (_currentSession == null) return;
+
+    // Validate verse range
+    final surah = _surahs.firstWhere(
+      (s) => s.id == _currentSession!.surahId,
+      orElse: () => _surahs.first,
+    );
+    
+    // Ensure verses are within valid range
+    if (startVerse > surah.verseCount) {
+      startVerse = surah.verseCount;
+    }
+    
+    if (endVerse > surah.verseCount) {
+      endVerse = surah.verseCount;
+    }
+    
+    if (startVerse > endVerse) {
+      startVerse = endVerse;
+    }
 
     _currentSession = _currentSession!.copyWith(
       startVerse: startVerse,
