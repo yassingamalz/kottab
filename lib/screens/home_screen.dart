@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
+import 'package:kottab/screens/activity_detail_screen.dart';
+import 'package:kottab/screens/achievements_screen.dart';
+import 'package:kottab/screens/weekly_detail_screen.dart';
 import 'package:kottab/widgets/home/achievement_row.dart';
 import 'package:kottab/widgets/home/activity_timeline.dart';
 import 'package:kottab/widgets/home/hero_section.dart';
@@ -144,7 +147,10 @@ class _HomeScreenState extends State<HomeScreen> {
             WeeklyProgress(
               weekData: weeklyData,
               onViewAll: () {
-                // TODO: Navigate to detailed weekly progress
+                // Navigate to weekly progress detail screen
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const WeeklyDetailScreen()),
+                );
               },
             ),
 
@@ -154,7 +160,8 @@ class _HomeScreenState extends State<HomeScreen> {
             TodayFocus(
               tasks: focusTasks,
               onContinue: () {
-                // TODO: Navigate to active memorization
+                // Navigate to active memorization
+                _showFocusDetailDialog(context);
               },
             ),
 
@@ -206,7 +213,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ActivityTimeline(
               activities: activities,
               onViewAll: () {
-                // TODO: Navigate to activity history
+                // Navigate to activity history
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const ActivityDetailScreen()),
+                );
               },
             ),
 
@@ -216,12 +226,72 @@ class _HomeScreenState extends State<HomeScreen> {
             AchievementRow(
               achievements: achievements,
               onViewAll: () {
-                // TODO: Navigate to achievements
+                // Navigate to achievements
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const AchievementsScreen()),
+                );
               },
             ),
 
             // Extra padding at bottom for the FAB
             const SizedBox(height: 80),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  // Show focus detail dialog
+  void _showFocusDetailDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        height: MediaQuery.of(context).size.height * 0.8,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'متابعة الحفظ',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: ListView(
+                children: [
+                  // Details would go here
+                  Text(
+                    'تفاصيل الحفظ والمراجعة',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 20),
+                  // Sample content
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.primaryLight),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'هنا ستظهر تفاصيل جلسة الحفظ الحالية مع خيارات المتابعة والتسجيل',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(50),
+              ),
+              child: const Text('إغلاق'),
+            ),
           ],
         ),
       ),
