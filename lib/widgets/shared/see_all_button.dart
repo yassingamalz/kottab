@@ -34,7 +34,7 @@ class SeeAllButton extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Icon(
-            Icons.chevron_left,
+            Icons.chevron_right, // Changed from chevron_left to chevron_right for correct RTL display
             size: 16,
             color: color ?? AppColors.primary,
           ),
