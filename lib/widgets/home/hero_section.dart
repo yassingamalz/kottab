@@ -225,13 +225,14 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
           ),
           
           // Activity summaries
-          SizedBox(
-            height: 100, // Fixed height to prevent overflow
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                // New memorization
-                _buildActivitySummary(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              // New memorization
+              Container(
+                width: 95, // Fixed width for each stat column
+                height: 80, // Fixed height
+                child: _buildActivitySummary(
                   context,
                   icon: Icons.bolt, 
                   color: AppColors.primary,
@@ -239,9 +240,13 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                   value: '${ArabicNumbers.toArabicDigits(widget.completedNewVerses)}/${ArabicNumbers.toArabicDigits(widget.targetNewVerses)}',
                   label: 'حفظ جديد',
                 ),
-                
-                // Recent review
-                _buildActivitySummary(
+              ),
+              
+              // Recent review
+              Container(
+                width: 95, // Fixed width for each stat column
+                height: 80, // Fixed height
+                child: _buildActivitySummary(
                   context,
                   icon: Icons.refresh, 
                   color: AppColors.secondary,
@@ -249,9 +254,13 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                   value: '${ArabicNumbers.toArabicDigits(widget.completedRecentVerses)}/${ArabicNumbers.toArabicDigits(widget.targetRecentVerses)}',
                   label: 'مراجعة حديثة',
                 ),
-                
-                // Old review
-                _buildActivitySummary(
+              ),
+              
+              // Old review
+              Container(
+                width: 95, // Fixed width for each stat column
+                height: 80, // Fixed height
+                child: _buildActivitySummary(
                   context,
                   icon: Icons.replay, 
                   color: AppColors.tertiary,
@@ -259,8 +268,8 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                   value: '${ArabicNumbers.toArabicDigits(widget.completedOldVerses)}/${ArabicNumbers.toArabicDigits(widget.targetOldVerses)}',
                   label: 'مراجعة سابقة',
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -292,14 +301,24 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.bodyMedium,
+        // Use a SizedBox with fixed width to prevent overflow
+        SizedBox(
+          width: 80,
+          child: Text(
+            value,
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
         ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppColors.textSecondary,
+        // Use a SizedBox with fixed width to prevent overflow
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
       ],
