@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:kottab/providers/session_provider.dart';
 import 'package:kottab/screens/home_screen.dart';
 import 'package:kottab/screens/schedule_screen.dart';
+import 'package:kottab/screens/search_screen.dart';
 import 'package:kottab/screens/stats_screen.dart';
 import 'package:kottab/screens/surahs_screen.dart';
 import 'package:kottab/widgets/navigation/app_drawer.dart';
@@ -73,7 +74,10 @@ class _MainScreenState extends State<MainScreen> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              // TODO: Implement search
+              // Navigate to search screen
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const SearchScreen()),
+              );
             },
           ),
         ],

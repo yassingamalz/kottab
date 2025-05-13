@@ -6,6 +6,7 @@ import 'package:kottab/providers/statistics_provider.dart';
 import 'package:kottab/providers/schedule_provider.dart';
 import 'package:kottab/providers/session_provider.dart';
 import 'package:kottab/providers/settings_provider.dart';
+import 'package:kottab/providers/search_provider.dart';
 import 'package:kottab/screens/main_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -18,6 +19,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => ScheduleProvider()),
         ChangeNotifierProvider(create: (_) => SessionProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => SearchProvider()),
       ],
       child: const KottabApp(),
     ),
@@ -35,7 +37,7 @@ class KottabApp extends StatelessWidget {
           title: 'كتاب',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme, // We need to implement this
+          darkTheme: AppTheme.darkTheme,
           themeMode: settingsProvider.themeMode,
           locale: const Locale('ar', 'SA'),
           supportedLocales: const [
