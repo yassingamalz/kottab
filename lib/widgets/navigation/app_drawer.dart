@@ -160,7 +160,7 @@ class AppDrawer extends StatelessWidget {
 
             // App name
             Text(
-              'كتاب',
+              'كتّاب',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -188,7 +188,7 @@ class AppDrawer extends StatelessWidget {
 
             // Copyright
             Text(
-              '© 2025 كتاب. جميع الحقوق محفوظة.',
+              '© 2025 كتّاب. جميع الحقوق محفوظة.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: AppColors.textSecondary,
               ),

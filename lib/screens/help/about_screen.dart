@@ -44,7 +44,7 @@ class AboutScreen extends StatelessWidget {
 
                   // App name and version
                   Text(
-                    'كتاب',
+                    'كتّاب',
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -74,7 +74,7 @@ class AboutScreen extends StatelessWidget {
                   _buildAboutSection(
                     context,
                     title: 'نبذة عن التطبيق',
-                    content: 'تطبيق كتاب هو أداة مصممة لمساعدة المسلمين في حفظ القرآن الكريم بطريقة منظمة وفعالة. يستخدم التطبيق نظام المراجعة المتباعدة الذي يعتمد على أحدث النظريات العلمية في مجال الذاكرة والتعلم.',
+                    content: 'تطبيق كتّاب هو أداة مصممة لمساعدة المسلمين في حفظ القرآن الكريم بطريقة منظمة وفعالة. يستخدم التطبيق نظام المراجعة المتباعدة الذي يعتمد على أحدث النظريات العلمية في مجال الذاكرة والتعلم.',
                   ),
 
                   const SizedBox(height: 24),
@@ -82,7 +82,7 @@ class AboutScreen extends StatelessWidget {
                   _buildAboutSection(
                     context,
                     title: 'فلسفة التطبيق',
-                    content: 'يؤمن فريق كتاب بأن حفظ القرآن الكريم يجب أن يكون متاحًا للجميع بطريقة سهلة ومنظمة. لذلك، صممنا تطبيقًا يجمع بين البساطة في الاستخدام والفعالية في النتائج، مما يساعد المستخدمين على بناء عادة يومية للحفظ والمراجعة.',
+                    content: 'يؤمن فريق كتّاب بأن حفظ القرآن الكريم يجب أن يكون متاحًا للجميع بطريقة سهلة ومنظمة. لذلك، صممنا تطبيقًا يجمع بين البساطة في الاستخدام والفعالية في النتائج، مما يساعد المستخدمين على بناء عادة يومية للحفظ والمراجعة.',
                   ),
 
                   const SizedBox(height: 24),
@@ -131,7 +131,7 @@ class AboutScreen extends StatelessWidget {
 
                   // Copyright
                   Text(
-                    '© 2025 كتاب. جميع الحقوق محفوظة.',
+                    '© 2025 كتّاب. جميع الحقوق محفوظة.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.textSecondary,
                     ),

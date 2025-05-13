@@ -71,7 +71,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
                   children: [
                     // Welcome page
                     TutorialPage(
-                      title: 'مرحبًا بك في كتاب',
+                      title: 'مرحبًا بك في كتّاب',
                       description: 'رفيقك في رحلة حفظ القرآن الكريم',
                       image: _buildTutorialImage(1),
                       onNext: _nextPage,

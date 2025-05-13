@@ -54,7 +54,7 @@ class KottabApp extends StatelessWidget {
           AppPerformance.instance.endMeasure('app_build');
 
           return MaterialApp(
-            title: 'كتاب',
+            title: 'كتّاب',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,

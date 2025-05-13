@@ -46,7 +46,7 @@ class _MainScreenState extends State<MainScreen> {
   String _getTitleForTab(int index) {
     switch (index) {
       case 0:
-        return 'كتاب';
+        return 'كتّاب';
       case 1:
         return 'سور القرآن';
       case 2:
@@ -54,7 +54,7 @@ class _MainScreenState extends State<MainScreen> {
       case 3:
         return 'جدول المراجعة';
       default:
-        return 'كتاب';
+        return 'كتّاب';
     }
   }
 

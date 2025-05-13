@@ -48,7 +48,7 @@ class SplashScreen extends StatelessWidget {
               const SizedBox(height: 32),
               // App name
               Text(
-                'كتاب',
+                'كتّاب',
                 style: Theme.of(context).textTheme.displayMedium?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
