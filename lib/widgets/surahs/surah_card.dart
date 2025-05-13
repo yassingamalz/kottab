@@ -4,8 +4,6 @@ import 'package:kottab/models/surah_model.dart';
 import 'package:kottab/utils/arabic_numbers.dart';
 import 'package:kottab/widgets/surahs/verse_set_card.dart';
 
-import '../../config/app_theme.dart';
-
 class SurahCard extends StatelessWidget {
   final Surah surah;
   final bool isExpanded;
@@ -124,23 +122,32 @@ class SurahCard extends StatelessWidget {
             ),
           ),
 
-          // Expanded content
+          // Expanded content with LazyBuilder for better performance
           AnimatedSize(
             duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
             child: isExpanded
                 ? Container(
               padding: const EdgeInsets.all(16),
               color: AppColors.background,
               child: Column(
                 children: [
-                  // Verse sets
-                  ...surah.verseSets.map((verseSet) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: VerseSetCard(
-                      verseSet: verseSet,
-                      surahName: surah.arabicName,
+                  // Use a separate ListView Builder for verse sets to improve performance
+                  if (surah.verseSets.isNotEmpty)
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: surah.verseSets.length,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: VerseSetCard(
+                            verseSet: surah.verseSets[index],
+                            surahName: surah.arabicName,
+                          ),
+                        );
+                      },
                     ),
-                  )).toList(),
 
                   // Add new verse set button
                   InkWell(
