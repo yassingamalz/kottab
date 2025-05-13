@@ -18,187 +18,165 @@ class AppDrawer extends StatelessWidget {
       child: Drawer(
         child: Consumer<SettingsProvider>(
           builder: (context, settingsProvider, child) {
-            return Stack(
-              clipBehavior: Clip.none,
+            return Column(
               children: [
-                // Enhanced profile header
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: _buildProfileHeader(context, settingsProvider),
+                // Enhanced profile header - fixed layout
+                _buildProfileHeader(context, settingsProvider),
+
+                // Menu items with better spacing
+                Expanded(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF9FAFB),
+                    ),
+                    child: ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        // Settings
+                        _buildMenuItem(
+                          context,
+                          title: 'الإعدادات',
+                          icon: Icons.settings,
+                          color: AppColors.primary,
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                            );
+                          },
+                        ),
+
+                        // Help & Support
+                        _buildMenuItem(
+                          context,
+                          title: 'مساعدة ودعم',
+                          icon: Icons.help_outline,
+                          color: AppColors.blue,
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const HelpScreen()),
+                            );
+                          },
+                        ),
+
+                        // About
+                        _buildMenuItem(
+                          context,
+                          title: 'عن التطبيق',
+                          icon: Icons.info_outline,
+                          color: AppColors.purple,
+                          onTap: () {
+                            Navigator.pop(context);
+                            _showAboutDialog(context);
+                          },
+                        ),
+
+                        // Notifications
+                        _buildMenuItem(
+                          context,
+                          title: 'الإشعارات',
+                          icon: Icons.notifications_outlined,
+                          color: Colors.amber.shade700,
+                          onTap: () {
+                            Navigator.pop(context);
+                            // Navigate to notification settings
+                          },
+                        ),
+
+                        // Bookmarks
+                        _buildMenuItem(
+                          context,
+                          title: 'المحفوظات',
+                          icon: Icons.bookmark_outline,
+                          color: AppColors.purple,
+                          onTap: () {
+                            Navigator.pop(context);
+                            // Navigate to bookmarks
+                          },
+                        ),
+
+                        // Statistics
+                        _buildMenuItem(
+                          context,
+                          title: 'الإحصائيات',
+                          icon: Icons.bar_chart,
+                          color: AppColors.blue,
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const StatsScreen()),
+                            );
+                          },
+                        ),
+
+                        // Achievements
+                        _buildMenuItem(
+                          context,
+                          title: 'الإنجازات',
+                          icon: Icons.emoji_events_outlined,
+                          color: Colors.amber.shade700,
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const AchievementsScreen()),
+                            );
+                          },
+                        ),
+
+                        // Theme Mode
+                        _buildMenuItem(
+                          context,
+                          title: settingsProvider.themeMode == ThemeMode.dark
+                              ? 'الوضع الفاتح'
+                              : 'الوضع الداكن',
+                          icon: settingsProvider.themeMode == ThemeMode.dark
+                              ? Icons.light_mode
+                              : Icons.dark_mode,
+                          color: Colors.deepPurple,
+                          onTap: () {
+                            ThemeMode newMode = settingsProvider.themeMode == ThemeMode.dark
+                                ? ThemeMode.light
+                                : ThemeMode.dark;
+                            settingsProvider.setThemeMode(newMode);
+                            Navigator.pop(context);
+                          },
+                        ),
+
+                        const Divider(
+                          height: 40,
+                          thickness: 1,
+                        ),
+
+                        // Reset data
+                        _buildMenuItem(
+                          context,
+                          title: 'إعادة تعيين البيانات',
+                          icon: Icons.delete_outline,
+                          iconColor: Colors.red.shade700,
+                          textColor: Colors.red.shade700,
+                          onTap: () {
+                            Navigator.pop(context);
+                            _showResetDataConfirmation(context, settingsProvider);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
 
-                // Menu items with curved background
-                Column(
-                  children: [
-                    // Add space for header
-                    SizedBox(
-                      height: 280, // Adjust this height based on header size
+                // App version
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  color: const Color(0xFFF9FAFB),
+                  child: Text(
+                    'الإصدار 1.0.0',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
                     ),
-                    
-                    // Menu items container
-                    Expanded(
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF9FAFB),
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(24),
-                            topRight: Radius.circular(24),
-                          ),
-                        ),
-                        child: ListView(
-                          padding: const EdgeInsets.all(16),
-                          children: [
-                            const SizedBox(height: 8),
-                            
-                            // Settings
-                            _buildMenuItem(
-                              context,
-                              title: 'الإعدادات',
-                              icon: Icons.settings,
-                              color: AppColors.primary,
-                              onTap: () {
-                                Navigator.pop(context);
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
-                                );
-                              },
-                            ),
-
-                            // Help & Support
-                            _buildMenuItem(
-                              context,
-                              title: 'مساعدة ودعم',
-                              icon: Icons.help_outline,
-                              color: AppColors.blue,
-                              onTap: () {
-                                Navigator.pop(context);
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (context) => const HelpScreen()),
-                                );
-                              },
-                            ),
-
-                            // About
-                            _buildMenuItem(
-                              context,
-                              title: 'عن التطبيق',
-                              icon: Icons.info_outline, 
-                              color: AppColors.purple,
-                              onTap: () {
-                                Navigator.pop(context);
-                                _showAboutDialog(context);
-                              },
-                            ),
-                            
-                            // Notifications 
-                            _buildMenuItem(
-                              context,
-                              title: 'الإشعارات',
-                              icon: Icons.notifications_outlined,
-                              color: Colors.amber.shade700,
-                              onTap: () {
-                                Navigator.pop(context);
-                                // Navigate to notification settings
-                              },
-                            ),
-                            
-                            // Bookmarks
-                            _buildMenuItem(
-                              context,
-                              title: 'المحفوظات',
-                              icon: Icons.bookmark_outline,
-                              color: AppColors.purple,
-                              onTap: () {
-                                Navigator.pop(context);
-                                // Navigate to bookmarks
-                              },
-                            ),
-                            
-                            // Statistics
-                            _buildMenuItem(
-                              context,
-                              title: 'الإحصائيات',
-                              icon: Icons.bar_chart,
-                              color: AppColors.blue,
-                              onTap: () {
-                                Navigator.pop(context);
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (context) => const StatsScreen()),
-                                );
-                              },
-                            ),
-                            
-                            // Achievements
-                            _buildMenuItem(
-                              context,
-                              title: 'الإنجازات',
-                              icon: Icons.emoji_events_outlined,
-                              color: Colors.amber.shade700,
-                              onTap: () {
-                                Navigator.pop(context);
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (context) => const AchievementsScreen()),
-                                );
-                              },
-                            ),
-                            
-                            // Theme Mode
-                            _buildMenuItem(
-                              context,
-                              title: settingsProvider.themeMode == ThemeMode.dark 
-                                    ? 'الوضع الفاتح' 
-                                    : 'الوضع الداكن',
-                              icon: settingsProvider.themeMode == ThemeMode.dark 
-                                    ? Icons.light_mode
-                                    : Icons.dark_mode,
-                              color: Colors.deepPurple,
-                              onTap: () {
-                                ThemeMode newMode = settingsProvider.themeMode == ThemeMode.dark 
-                                    ? ThemeMode.light 
-                                    : ThemeMode.dark;
-                                settingsProvider.setThemeMode(newMode);
-                                Navigator.pop(context);
-                              },
-                            ),
-
-                            const Divider(
-                              height: 40,
-                              thickness: 1,
-                            ),
-
-                            // Reset data
-                            _buildMenuItem(
-                              context,
-                              title: 'إعادة تعيين البيانات',
-                              icon: Icons.delete_outline,
-                              iconColor: Colors.red.shade700,
-                              textColor: Colors.red.shade700,
-                              onTap: () {
-                                Navigator.pop(context);
-                                _showResetDataConfirmation(context, settingsProvider);
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // App version
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      color: const Color(0xFFF9FAFB),
-                      child: Text(
-                        'الإصدار 1.0.0',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             );
@@ -208,17 +186,18 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  /// Build enhanced profile header
+  /// Build enhanced profile header with fixed positioning
   Widget _buildProfileHeader(BuildContext context, SettingsProvider provider) {
     final user = provider.user;
     final int streak = user?.streak ?? 0;
     final double quranProgress = (user?.quranProgress ?? 0) * 100;
     final int totalMemorizedVerses = user?.totalMemorizedVerses ?? 0;
-    
+
     return Container(
+      width: double.infinity,
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 16,
-        bottom: 32,
+        bottom: 16,
         left: 16,
         right: 16,
       ),
@@ -230,12 +209,11 @@ class AppDrawer extends StatelessWidget {
         ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // User avatar, name and edit button
+          // Avatar and edit button
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Edit profile button
               const Spacer(),
               IconButton(
                 onPressed: () {
@@ -246,7 +224,7 @@ class AppDrawer extends StatelessWidget {
               ),
             ],
           ),
-          
+
           // Avatar with streak indicator
           Stack(
             clipBehavior: Clip.none,
@@ -304,9 +282,9 @@ class AppDrawer extends StatelessWidget {
                 ),
             ],
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           // User name
           Text(
             user?.name.isNotEmpty == true ? user!.name : 'ضيف',
@@ -315,44 +293,49 @@ class AppDrawer extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
-          // Stats grid
-          Row(
-            children: [
-              _buildStatItem(
-                context,
-                value: streak.toString(),
-                label: 'يوم نشاط',
-              ),
-              _buildStatItem(
-                context,
-                value: '${quranProgress.toStringAsFixed(0)}%',
-                label: 'من القرآن',
-              ),
-              _buildStatItem(
-                context,
-                value: totalMemorizedVerses.toString(),
-                label: 'آية محفوظة',
-              ),
-            ],
+
+          // Stats grid - proper layout
+          Container(
+            width: double.infinity,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildStatItem(
+                  context,
+                  value: streak.toString(),
+                  label: 'يوم نشاط',
+                ),
+                const SizedBox(width: 8),
+                _buildStatItem(
+                  context,
+                  value: '${quranProgress.toStringAsFixed(0)}%',
+                  label: 'من القرآن',
+                ),
+                const SizedBox(width: 8),
+                _buildStatItem(
+                  context,
+                  value: totalMemorizedVerses.toString(),
+                  label: 'آية محفوظة',
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Build a stat item for the profile header
+  /// Build a stat item for the profile header with fixed width
   Widget _buildStatItem(
-    BuildContext context, {
-    required String value,
-    required String label,
-  }) {
+      BuildContext context, {
+        required String value,
+        required String label,
+      }) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.1),
           borderRadius: BorderRadius.circular(12),
@@ -364,15 +347,17 @@ class AppDrawer extends StatelessWidget {
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 18,
+                fontSize: 16,
               ),
+              overflow: TextOverflow.ellipsis,
             ),
             Text(
               label,
               style: TextStyle(
                 color: Colors.white.withOpacity(0.8),
-                fontSize: 12,
+                fontSize: 10,
               ),
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -382,16 +367,16 @@ class AppDrawer extends StatelessWidget {
 
   /// Build an enhanced menu item
   Widget _buildMenuItem(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required VoidCallback onTap,
-    Color? color,
-    Color? iconColor,
-    Color? textColor,
-  }) {
+      BuildContext context, {
+        required String title,
+        required IconData icon,
+        required VoidCallback onTap,
+        Color? color,
+        Color? iconColor,
+        Color? textColor,
+      }) {
     final itemColor = iconColor ?? color ?? AppColors.primary;
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: InkWell(
@@ -406,8 +391,8 @@ class AppDrawer extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: textColor != null 
-                      ? Colors.red.shade50 
+                  color: textColor != null
+                      ? Colors.red.shade50
                       : color?.withOpacity(0.1) ?? AppColors.primaryLight,
                   borderRadius: BorderRadius.circular(12),
                 ),
