@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kottab/config/app_colors.dart';
 import 'package:kottab/providers/settings_provider.dart';
+import 'package:kottab/screens/help/help_screen.dart';
 import 'package:kottab/screens/settings/settings_screen.dart';
 import 'package:kottab/widgets/profile/profile_header.dart';
 
@@ -54,7 +55,9 @@ class AppDrawer extends StatelessWidget {
                         icon: Icons.help_outline,
                         onTap: () {
                           Navigator.pop(context);
-                          // TODO: Navigate to help screen
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (context) => const HelpScreen()),
+                          );
                         },
                       ),
 
