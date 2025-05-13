@@ -18,173 +18,187 @@ class AppDrawer extends StatelessWidget {
       child: Drawer(
         child: Consumer<SettingsProvider>(
           builder: (context, settingsProvider, child) {
-            return Column(
+            return Stack(
+              clipBehavior: Clip.none,
               children: [
                 // Enhanced profile header
-                _buildProfileHeader(context, settingsProvider),
-
-                // Menu items with curved background
-                Expanded(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF9FAFB),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(24),
-                        topRight: Radius.circular(24),
-                      ),
-                    ),
-                    margin: const EdgeInsets.only(top: -16),
-                    padding: const EdgeInsets.all(16),
-                    child: ListView(
-                      padding: EdgeInsets.zero,
-                      children: [
-                        const SizedBox(height: 8),
-                        
-                        // Settings
-                        _buildMenuItem(
-                          context,
-                          title: 'الإعدادات',
-                          icon: Icons.settings,
-                          color: AppColors.primary,
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (context) => const SettingsScreen()),
-                            );
-                          },
-                        ),
-
-                        // Help & Support
-                        _buildMenuItem(
-                          context,
-                          title: 'مساعدة ودعم',
-                          icon: Icons.help_outline,
-                          color: AppColors.blue,
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (context) => const HelpScreen()),
-                            );
-                          },
-                        ),
-
-                        // About
-                        _buildMenuItem(
-                          context,
-                          title: 'عن التطبيق',
-                          icon: Icons.info_outline, 
-                          color: AppColors.purple,
-                          onTap: () {
-                            Navigator.pop(context);
-                            _showAboutDialog(context);
-                          },
-                        ),
-                        
-                        // Notifications 
-                        _buildMenuItem(
-                          context,
-                          title: 'الإشعارات',
-                          icon: Icons.notifications_outlined,
-                          color: Colors.amber.shade700,
-                          onTap: () {
-                            Navigator.pop(context);
-                            // Navigate to notification settings
-                          },
-                        ),
-                        
-                        // Bookmarks
-                        _buildMenuItem(
-                          context,
-                          title: 'المحفوظات',
-                          icon: Icons.bookmark_outline,
-                          color: AppColors.purple,
-                          onTap: () {
-                            Navigator.pop(context);
-                            // Navigate to bookmarks
-                          },
-                        ),
-                        
-                        // Statistics
-                        _buildMenuItem(
-                          context,
-                          title: 'الإحصائيات',
-                          icon: Icons.bar_chart,
-                          color: AppColors.blue,
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (context) => const StatsScreen()),
-                            );
-                          },
-                        ),
-                        
-                        // Achievements
-                        _buildMenuItem(
-                          context,
-                          title: 'الإنجازات',
-                          icon: Icons.emoji_events_outlined,
-                          color: Colors.amber.shade700,
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (context) => const AchievementsScreen()),
-                            );
-                          },
-                        ),
-                        
-                        // Theme Mode
-                        _buildMenuItem(
-                          context,
-                          title: settingsProvider.themeMode == ThemeMode.dark 
-                                ? 'الوضع الفاتح' 
-                                : 'الوضع الداكن',
-                          icon: settingsProvider.themeMode == ThemeMode.dark 
-                                ? Icons.light_mode
-                                : Icons.dark_mode,
-                          color: Colors.deepPurple,
-                          onTap: () {
-                            ThemeMode newMode = settingsProvider.themeMode == ThemeMode.dark 
-                                ? ThemeMode.light 
-                                : ThemeMode.dark;
-                            settingsProvider.setThemeMode(newMode);
-                            Navigator.pop(context);
-                          },
-                        ),
-
-                        const Divider(
-                          height: 40,
-                          thickness: 1,
-                        ),
-
-                        // Reset data
-                        _buildMenuItem(
-                          context,
-                          title: 'إعادة تعيين البيانات',
-                          icon: Icons.delete_outline,
-                          iconColor: Colors.red.shade700,
-                          textColor: Colors.red.shade700,
-                          onTap: () {
-                            Navigator.pop(context);
-                            _showResetDataConfirmation(context, settingsProvider);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: _buildProfileHeader(context, settingsProvider),
                 ),
 
-                // App version
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  color: const Color(0xFFF9FAFB),
-                  child: Text(
-                    'الإصدار 1.0.0',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
+                // Menu items with curved background
+                Column(
+                  children: [
+                    // Add space for header
+                    SizedBox(
+                      height: 280, // Adjust this height based on header size
                     ),
-                    textAlign: TextAlign.center,
-                  ),
+                    
+                    // Menu items container
+                    Expanded(
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(24),
+                            topRight: Radius.circular(24),
+                          ),
+                        ),
+                        child: ListView(
+                          padding: const EdgeInsets.all(16),
+                          children: [
+                            const SizedBox(height: 8),
+                            
+                            // Settings
+                            _buildMenuItem(
+                              context,
+                              title: 'الإعدادات',
+                              icon: Icons.settings,
+                              color: AppColors.primary,
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                                );
+                              },
+                            ),
+
+                            // Help & Support
+                            _buildMenuItem(
+                              context,
+                              title: 'مساعدة ودعم',
+                              icon: Icons.help_outline,
+                              color: AppColors.blue,
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (context) => const HelpScreen()),
+                                );
+                              },
+                            ),
+
+                            // About
+                            _buildMenuItem(
+                              context,
+                              title: 'عن التطبيق',
+                              icon: Icons.info_outline, 
+                              color: AppColors.purple,
+                              onTap: () {
+                                Navigator.pop(context);
+                                _showAboutDialog(context);
+                              },
+                            ),
+                            
+                            // Notifications 
+                            _buildMenuItem(
+                              context,
+                              title: 'الإشعارات',
+                              icon: Icons.notifications_outlined,
+                              color: Colors.amber.shade700,
+                              onTap: () {
+                                Navigator.pop(context);
+                                // Navigate to notification settings
+                              },
+                            ),
+                            
+                            // Bookmarks
+                            _buildMenuItem(
+                              context,
+                              title: 'المحفوظات',
+                              icon: Icons.bookmark_outline,
+                              color: AppColors.purple,
+                              onTap: () {
+                                Navigator.pop(context);
+                                // Navigate to bookmarks
+                              },
+                            ),
+                            
+                            // Statistics
+                            _buildMenuItem(
+                              context,
+                              title: 'الإحصائيات',
+                              icon: Icons.bar_chart,
+                              color: AppColors.blue,
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (context) => const StatsScreen()),
+                                );
+                              },
+                            ),
+                            
+                            // Achievements
+                            _buildMenuItem(
+                              context,
+                              title: 'الإنجازات',
+                              icon: Icons.emoji_events_outlined,
+                              color: Colors.amber.shade700,
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (context) => const AchievementsScreen()),
+                                );
+                              },
+                            ),
+                            
+                            // Theme Mode
+                            _buildMenuItem(
+                              context,
+                              title: settingsProvider.themeMode == ThemeMode.dark 
+                                    ? 'الوضع الفاتح' 
+                                    : 'الوضع الداكن',
+                              icon: settingsProvider.themeMode == ThemeMode.dark 
+                                    ? Icons.light_mode
+                                    : Icons.dark_mode,
+                              color: Colors.deepPurple,
+                              onTap: () {
+                                ThemeMode newMode = settingsProvider.themeMode == ThemeMode.dark 
+                                    ? ThemeMode.light 
+                                    : ThemeMode.dark;
+                                settingsProvider.setThemeMode(newMode);
+                                Navigator.pop(context);
+                              },
+                            ),
+
+                            const Divider(
+                              height: 40,
+                              thickness: 1,
+                            ),
+
+                            // Reset data
+                            _buildMenuItem(
+                              context,
+                              title: 'إعادة تعيين البيانات',
+                              icon: Icons.delete_outline,
+                              iconColor: Colors.red.shade700,
+                              textColor: Colors.red.shade700,
+                              onTap: () {
+                                Navigator.pop(context);
+                                _showResetDataConfirmation(context, settingsProvider);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // App version
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      color: const Color(0xFFF9FAFB),
+                      child: Text(
+                        'الإصدار 1.0.0',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             );
