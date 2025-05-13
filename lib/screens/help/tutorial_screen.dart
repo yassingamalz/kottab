@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
+import 'package:kottab/screens/main_screen.dart';
 import 'package:kottab/widgets/tutorial/tutorial_page.dart';
 
 class TutorialScreen extends StatefulWidget {
@@ -45,7 +46,10 @@ class _TutorialScreenState extends State<TutorialScreen> {
   /// Finish tutorial (either by completing or skipping)
   void _finishTutorial() {
     if (widget.isOnboarding) {
-      // TODO: Navigate to main screen and mark onboarding as completed
+      // Navigate to main screen and replace the current screen
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const MainScreen()),
+      );
     } else {
       Navigator.of(context).pop();
     }
