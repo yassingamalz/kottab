@@ -132,8 +132,8 @@ class ActivityDetailScreen extends StatelessWidget {
               
               const SizedBox(height: 24),
               
-              // Activity list
-              activities.map((activity) => _buildActivityItem(context, activity)).toList(),
+              // Activity list - use spread operator to insert list items
+              ...activities.map((activity) => _buildActivityItem(context, activity)).toList(),
             ],
           ),
         ),
