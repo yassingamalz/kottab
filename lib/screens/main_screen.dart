@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:kottab/providers/session_provider.dart';
 import 'package:kottab/screens/home_screen.dart';
 import 'package:kottab/screens/schedule_screen.dart';
 import 'package:kottab/screens/stats_screen.dart';
 import 'package:kottab/screens/surahs_screen.dart';
+import 'package:kottab/widgets/sessions/add_session_modal.dart';
 import 'package:kottab/widgets/splash_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -108,11 +111,24 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Implement quick add functionality
-        },
+        onPressed: () => _showAddSessionModal(context),
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  /// Show the add session modal
+  void _showAddSessionModal(BuildContext context) {
+    // Initialize a new session
+    Provider.of<SessionProvider>(context, listen: false).startNewSession();
+
+    // Show modal bottom sheet
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      isDismissible: false,
+      builder: (context) => const AddSessionModal(),
     );
   }
 }

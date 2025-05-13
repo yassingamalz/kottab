@@ -1,0 +1,257 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:kottab/config/app_colors.dart';
+import 'package:kottab/providers/session_provider.dart';
+import 'package:kottab/widgets/sessions/session_type_selector.dart';
+import 'package:kottab/widgets/sessions/verse_range_selector.dart';
+import 'package:kottab/widgets/sessions/session_quality_selector.dart';
+import 'package:kottab/widgets/shared/custom_snackbar.dart';
+
+class AddSessionModal extends StatefulWidget {
+  const AddSessionModal({super.key});
+
+  @override
+  State<AddSessionModal> createState() => _AddSessionModalState();
+}
+
+class _AddSessionModalState extends State<AddSessionModal> {
+  final TextEditingController _notesController = TextEditingController();
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<SessionProvider>(
+      builder: (context, sessionProvider, child) {
+        // Get the current session being edited
+        final session = sessionProvider.currentSession;
+
+        if (session == null) {
+          return const SizedBox.shrink();
+        }
+
+        // Update notes controller
+        _notesController.text = session.notes;
+
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.9,
+          ),
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'تسجيل جلسة حفظ/مراجعة',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      sessionProvider.clearCurrentSession();
+                    },
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+
+              const Divider(),
+
+              // Content
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Session type selector
+                      SessionTypeSelector(
+                        selectedType: session.type,
+                        onTypeSelected: (type) {
+                          sessionProvider.updateSessionType(type);
+                        },
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Verse range selector
+                      VerseRangeSelector(
+                        surahs: sessionProvider.surahs,
+                        selectedSurahId: session.surahId,
+                        startVerse: session.startVerse,
+                        endVerse: session.endVerse,
+                        onSurahChanged: (surahId) {
+                          sessionProvider.updateSessionSurah(surahId);
+                        },
+                        onRangeChanged: (start, end) {
+                          sessionProvider.updateSessionVerseRange(start, end);
+                        },
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Quality selector
+                      SessionQualitySelector(
+                        quality: session.quality,
+                        onQualityChanged: (quality) {
+                          sessionProvider.updateSessionQuality(quality);
+                        },
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Notes
+                      Text(
+                        'ملاحظات (اختياري)',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      TextField(
+                        controller: _notesController,
+                        decoration: InputDecoration(
+                          hintText: 'أضف ملاحظات حول الجلسة...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                        maxLines: 3,
+                        onChanged: (value) {
+                          sessionProvider.updateSessionNotes(value);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Actions
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _isSubmitting
+                          ? null
+                          : () {
+                        Navigator.of(context).pop();
+                        sessionProvider.clearCurrentSession();
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'إلغاء',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 16),
+
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isSubmitting
+                          ? null
+                          : () => _handleSave(context, sessionProvider),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                          : Text(
+                        'حفظ',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Handle save button press
+  Future<void> _handleSave(BuildContext context, SessionProvider provider) async {
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final success = await provider.saveCurrentSession();
+
+      if (!mounted) return;
+
+      if (success) {
+        Navigator.of(context).pop();
+        showCustomSnackBar(
+          context: context,
+          message: 'تم تسجيل الجلسة بنجاح!',
+          type: SnackBarType.success,
+        );
+      } else {
+        showCustomSnackBar(
+          context: context,
+          message: 'حدث خطأ أثناء تسجيل الجلسة. يرجى المحاولة مرة أخرى.',
+          type: SnackBarType.error,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      showCustomSnackBar(
+        context: context,
+        message: 'حدث خطأ أثناء تسجيل الجلسة. يرجى المحاولة مرة أخرى.',
+        type: SnackBarType.error,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+}
