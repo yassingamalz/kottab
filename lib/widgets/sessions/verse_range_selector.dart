@@ -69,7 +69,7 @@ class _VerseRangeSelectorState extends State<VerseRangeSelector> {
       _selectedSurahId = value;
       _selectedSurah = _findSelectedSurah();
 
-      // Reset verse range
+      // Reset verse range to safe defaults
       _startVerse = 1;
       _endVerse = _calculateDefaultEndVerse();
     });
@@ -115,41 +115,6 @@ class _VerseRangeSelectorState extends State<VerseRangeSelector> {
     }
 
     return end;
-  }
-
-  /// Generate items for the surah dropdown
-  List<DropdownMenuItem<int>> _generateSurahItems() {
-    return widget.surahs.map((surah) {
-      return DropdownMenuItem<int>(
-        value: surah.id,
-        child: Text('${surah.id}. ${surah.arabicName}'),
-      );
-    }).toList();
-  }
-
-  /// Generate items for the start verse dropdown
-  List<DropdownMenuItem<int>> _generateStartVerseItems() {
-    return List.generate(_selectedSurah.verseCount, (index) {
-      final verse = index + 1;
-      return DropdownMenuItem<int>(
-        value: verse,
-        child: Text(ArabicNumbers.toArabicDigits(verse)),
-      );
-    });
-  }
-
-  /// Generate items for the end verse dropdown
-  List<DropdownMenuItem<int>> _generateEndVerseItems() {
-    return List.generate(
-      _selectedSurah.verseCount - _startVerse + 1,
-          (index) {
-        final verse = _startVerse + index;
-        return DropdownMenuItem<int>(
-          value: verse,
-          child: Text(ArabicNumbers.toArabicDigits(verse)),
-        );
-      },
-    );
   }
 
   @override
@@ -268,5 +233,68 @@ class _VerseRangeSelectorState extends State<VerseRangeSelector> {
         ),
       ],
     );
+  }
+
+  /// Generate items for the surah dropdown with unique values
+  List<DropdownMenuItem<int>> _generateSurahItems() {
+    final items = <DropdownMenuItem<int>>[];
+    
+    // Create a set to track used values and prevent duplicates
+    final Set<int> usedValues = {};
+    
+    for (final surah in widget.surahs) {
+      if (!usedValues.contains(surah.id)) {
+        usedValues.add(surah.id);
+        
+        items.add(DropdownMenuItem<int>(
+          value: surah.id,
+          child: Text('${surah.id}. ${surah.arabicName}'),
+        ));
+      }
+    }
+    
+    return items;
+  }
+
+  /// Generate items for the start verse dropdown with unique values
+  List<DropdownMenuItem<int>> _generateStartVerseItems() {
+    final items = <DropdownMenuItem<int>>[];
+    final Set<int> usedValues = {};
+    
+    for (int i = 0; i < _selectedSurah.verseCount; i++) {
+      final verse = i + 1;
+      
+      if (!usedValues.contains(verse)) {
+        usedValues.add(verse);
+        
+        items.add(DropdownMenuItem<int>(
+          value: verse,
+          child: Text(ArabicNumbers.toArabicDigits(verse)),
+        ));
+      }
+    }
+    
+    return items;
+  }
+
+  /// Generate items for the end verse dropdown with unique values
+  List<DropdownMenuItem<int>> _generateEndVerseItems() {
+    final items = <DropdownMenuItem<int>>[];
+    final Set<int> usedValues = {};
+    
+    for (int i = 0; i < _selectedSurah.verseCount - _startVerse + 1; i++) {
+      final verse = _startVerse + i;
+      
+      if (!usedValues.contains(verse)) {
+        usedValues.add(verse);
+        
+        items.add(DropdownMenuItem<int>(
+          value: verse,
+          child: Text(ArabicNumbers.toArabicDigits(verse)),
+        ));
+      }
+    }
+    
+    return items;
   }
 }
