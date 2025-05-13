@@ -38,10 +38,13 @@ class WeeklyProgress extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // Weekly progress rings
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: weekData.map((data) => _buildDayProgressRing(context, data)).toList(),
+          // Weekly progress rings - ensure fixed height to prevent overflow
+          SizedBox(
+            height: 85, // Set a fixed height to contain all elements
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: weekData.map((data) => _buildDayProgressRing(context, data)).toList(),
+            ),
           ),
         ],
       ),
@@ -50,6 +53,7 @@ class WeeklyProgress extends StatelessWidget {
 
   Widget _buildDayProgressRing(BuildContext context, DailyProgressData data) {
     return Column(
+      mainAxisSize: MainAxisSize.min, // Use minimum size
       children: [
         // Day progress ring
         Stack(
