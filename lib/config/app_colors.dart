@@ -21,4 +21,13 @@ class AppColors {
   static const Color textTertiary = Color(0xFF9CA3AF);
   static const Color border = Color(0xFFE5E7EB);
   static const Color divider = Color(0xFFF3F4F6);
+
+  // Dark mode colors
+  static const Color darkBackground = Color(0xFF111827);
+  static const Color darkCard = Color(0xFF1F2937);
+  static const Color darkTextPrimary = Color(0xFFF9FAFB);
+  static const Color darkTextSecondary = Color(0xFFD1D5DB);
+  static const Color darkTextTertiary = Color(0xFF9CA3AF);
+  static const Color darkBorder = Color(0xFF374151);
+  static const Color darkDivider = Color(0xFF374151);
 }

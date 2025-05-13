@@ -5,6 +5,7 @@ import 'package:kottab/screens/home_screen.dart';
 import 'package:kottab/screens/schedule_screen.dart';
 import 'package:kottab/screens/stats_screen.dart';
 import 'package:kottab/screens/surahs_screen.dart';
+import 'package:kottab/widgets/navigation/app_drawer.dart';
 import 'package:kottab/widgets/sessions/add_session_modal.dart';
 import 'package:kottab/widgets/splash_screen.dart';
 
@@ -75,14 +76,9 @@ class _MainScreenState extends State<MainScreen> {
               // TODO: Implement search
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              // TODO: Implement settings
-            },
-          ),
         ],
       ),
+      drawer: const AppDrawer(),
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
