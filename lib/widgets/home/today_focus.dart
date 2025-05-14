@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
 import 'package:kottab/utils/arabic_numbers.dart';
 import 'package:provider/provider.dart';
-import 'package:kottab/providers/schedule_provider.dart';
-import '../../providers/schedule_provider.dart';
-import '../../providers/session_provider.dart';
-import '../../providers/session_provider.dart' as SessionProvider;
-import '../sessions/add_session_modal.dart';
+import 'package:kottab/providers/session_provider.dart' as session_provider;
+import 'package:kottab/providers/schedule_provider.dart' as schedule_provider;
+import 'package:kottab/widgets/sessions/add_session_modal.dart';
 
 class TodayFocus extends StatefulWidget {
   final List<FocusTaskData> tasks;
@@ -93,7 +91,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<SessionProvider.SessionProvider, ScheduleProvider>(
+    return Consumer2<session_provider.SessionProvider, schedule_provider.ScheduleProvider>(
       builder: (context, sessionProvider, scheduleProvider, child) {
         // Get daily verse target from settings
         final int dailyTarget = scheduleProvider.dailyVerseTarget;
@@ -354,7 +352,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
   }
   
   /// Show add session modal
-  void _showAddSession(BuildContext context, SessionProvider.SessionProvider sessionProvider) {
+  void _showAddSession(BuildContext context, session_provider.SessionProvider sessionProvider) {
     // Only if we have tasks to work with
     if (widget.tasks.isEmpty) return;
     
@@ -381,14 +379,14 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
   }
   
   /// Convert task type to session type
-  SessionProvider.SessionType _convertTaskTypeToSessionType(TaskType taskType) {
+  session_provider.SessionType _convertTaskTypeToSessionType(TaskType taskType) {
     switch (taskType) {
       case TaskType.newMemorization:
-        return SessionProvider.SessionType.newMemorization;
+        return session_provider.SessionType.newMemorization;
       case TaskType.recentReview:
-        return SessionProvider.SessionType.recentReview;
+        return session_provider.SessionType.recentReview;
       case TaskType.oldReview:
-        return SessionProvider.SessionType.oldReview;
+        return session_provider.SessionType.oldReview;
     }
   }
 }
