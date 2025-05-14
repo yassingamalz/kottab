@@ -104,14 +104,30 @@ class ScheduleProvider extends ChangeNotifier {
   /// Get the cycle for older reviews
   int get oldReviewCycle => _settings['oldReviewCycle'] ?? 5;
 
-  /// Update a setting value
+  /// Update a setting value and regenerate schedule
   Future<void> updateSetting(String key, dynamic value) async {
-    await AppPreferences.saveSetting(key, value);
-    _settings[key] = value;
+    _isLoading = true;
     notifyListeners();
-
-    // Regenerate schedule with new settings
-    await refreshData();
+    
+    try {
+      // Update in preferences
+      await AppPreferences.saveSetting(key, value);
+      
+      // Update local settings map
+      _settings[key] = value;
+      
+      // Reload user to ensure settings are consistent
+      final user = await _memorizationService.getUser();
+      _settings = Map<String, dynamic>.from(user.settings);
+      
+      // Regenerate schedule with new settings
+      _weekSchedule = await _generateWeekSchedule();
+    } catch (e) {
+      print('Error updating setting $key: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   /// Generate an empty week schedule
@@ -129,7 +145,7 @@ class ScheduleProvider extends ChangeNotifier {
     });
   }
 
-  /// Generate the week schedule based on memorization plan
+  /// Generate the week schedule based on memorization plan and current settings
   Future<List<DaySchedule>> _generateWeekSchedule() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -164,7 +180,7 @@ class ScheduleProvider extends ChangeNotifier {
       ));
     }
 
-    // Add recent review sessions
+    // Add recent review sessions - use current reviewSetSize setting
     for (final verseSet in todayPlan['recent'] ?? []) {
       final surahName = surahs
           .firstWhere((s) => s.id == verseSet.surahId,
@@ -184,7 +200,7 @@ class ScheduleProvider extends ChangeNotifier {
       ));
     }
 
-    // Add old review sessions
+    // Add old review sessions - use current oldReviewCycle setting
     for (final verseSet in todayPlan['old'] ?? []) {
       final surahName = surahs
           .firstWhere((s) => s.id == verseSet.surahId,
@@ -211,7 +227,7 @@ class ScheduleProvider extends ChangeNotifier {
       sessions: todaySessions,
     ));
 
-    // Generate the rest of the week with placeholder sessions
+    // Generate the rest of the week with placeholder sessions based on current settings
     for (int i = 1; i < 7; i++) {
       final date = today.add(Duration(days: i));
       final sessions = _generatePlaceholderSessions(surahs);
@@ -226,42 +242,40 @@ class ScheduleProvider extends ChangeNotifier {
     return weekSchedule;
   }
 
-  /// Generate placeholder sessions for future days
+  /// Generate placeholder sessions for future days using current settings
   List<ScheduledSession> _generatePlaceholderSessions(List<Surah> surahs) {
-    // Create a mix of sessions
     final List<ScheduledSession> sessions = [];
+    final int dailyTarget = dailyVerseTarget;
+    final int reviewSize = reviewSetSize;
+    final int reviewCycle = oldReviewCycle;
 
-    // New memorization
-    final surah =
-        surahs.firstWhere((s) => s.id == 2, orElse: () => surahs.first);
+    // New memorization with dynamic verse count based on settings
+    final surah = surahs.firstWhere((s) => s.id == 2, orElse: () => surahs.first);
     sessions.add(ScheduledSession(
       surahId: surah.id,
       surahName: surah.arabicName,
       startVerse: 11,
-      endVerse: 11 + dailyVerseTarget - 1,
+      endVerse: 11 + dailyTarget - 1,
       type: SessionType.newMemorization,
     ));
 
-    // Add a recent review every other day
+    // Add a recent review with dynamic size based on settings
     if (sessions.length % 2 == 0) {
+      final endVerse = Math.min(10 + reviewSize, surahs.firstWhere((s) => s.id == 2, orElse: () => surahs.first).verseCount);
       sessions.add(ScheduledSession(
         surahId: 2,
-        surahName: surahs
-            .firstWhere((s) => s.id == 2, orElse: () => surahs.first)
-            .arabicName,
+        surahName: surahs.firstWhere((s) => s.id == 2, orElse: () => surahs.first).arabicName,
         startVerse: 1,
-        endVerse: 10,
+        endVerse: endVerse,
         type: SessionType.recentReview,
       ));
     }
 
-    // Add an old review every third day
-    if (sessions.length % 3 == 0) {
+    // Add an old review with cycle based on settings
+    if (sessions.length % reviewCycle == 0 || reviewCycle == 1) {
       sessions.add(ScheduledSession(
         surahId: 1,
-        surahName: surahs
-            .firstWhere((s) => s.id == 1, orElse: () => surahs.first)
-            .arabicName,
+        surahName: surahs.firstWhere((s) => s.id == 1, orElse: () => surahs.first).arabicName,
         startVerse: 1,
         endVerse: 7,
         type: SessionType.oldReview,
