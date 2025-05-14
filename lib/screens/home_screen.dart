@@ -10,6 +10,7 @@ import 'package:kottab/widgets/home/hero_section.dart';
 import 'package:kottab/widgets/home/stat_card.dart';
 import 'package:kottab/widgets/home/today_focus.dart';
 import 'package:kottab/widgets/home/weekly_progress.dart';
+import 'package:kottab/widgets/sessions/add_session_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:kottab/providers/statistics_provider.dart';
 import 'package:kottab/providers/settings_provider.dart';
