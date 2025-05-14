@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
 import 'package:kottab/utils/arabic_numbers.dart';
 
-import '../../config/app_theme.dart';
-
 class SettingsItem extends StatelessWidget {
   final String title;
   final String description;
@@ -25,11 +23,11 @@ class SettingsItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: Colors.grey.shade200,
+            color: const Color(0xFFE2E8F0),
             width: 1,
           ),
         ),
@@ -44,12 +42,18 @@ class SettingsItem extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0F172A),
+                  ),
                 ),
+                const SizedBox(height: 4),
                 Text(
                   description,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF64748B),
                   ),
                 ),
               ],
@@ -60,43 +64,100 @@ class SettingsItem extends StatelessWidget {
           Row(
             children: [
               // Decrease button
-              IconButton(
-                onPressed: value > minValue
-                    ? () => onChanged(value - 1)
-                    : null,
-                icon: Icon(
-                  Icons.remove_circle_outline,
-                  color: value > minValue
-                      ? AppColors.primary
-                      : Colors.grey.shade400,
+              Material(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(18),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: value > minValue
+                      ? () => onChanged(value - 1)
+                      : null,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.remove,
+                        color: value > minValue
+                            ? const Color(0xFF64748B)
+                            : const Color(0xFFCBD5E1),
+                        size: 18,
+                      ),
+                    ),
+                  ),
                 ),
               ),
 
               // Value display
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                width: 40,
+                height: 36,
+                margin: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFFE2E8F0),
+                    width: 1,
+                  ),
                 ),
-                child: Text(
-                  ArabicNumbers.toArabicDigits(value),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                child: Center(
+                  child: Text(
+                    ArabicNumbers.toArabicDigits(value),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0F172A),
+                    ),
                   ),
                 ),
               ),
 
               // Increase button
-              IconButton(
-                onPressed: value < maxValue
-                    ? () => onChanged(value + 1)
-                    : null,
-                icon: Icon(
-                  Icons.add_circle_outline,
-                  color: value < maxValue
-                      ? AppColors.primary
-                      : Colors.grey.shade400,
+              Material(
+                borderRadius: BorderRadius.circular(18),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: value < maxValue
+                      ? () => onChanged(value + 1)
+                      : null,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      gradient: value < maxValue
+                          ? const LinearGradient(
+                              colors: [Color(0xFF10B981), Color(0xFF059669)],
+                              begin: Alignment.topRight,
+                              end: Alignment.bottomLeft,
+                            )
+                          : const LinearGradient(
+                              colors: [Color(0xFFCBD5E1), Color(0xFFCBD5E1)],
+                              begin: Alignment.center,
+                              end: Alignment.center,
+                            ),
+                      boxShadow: value < maxValue
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFF10B981).withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.add,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
