@@ -97,8 +97,8 @@ class _SurahsScreenState extends State<SurahsScreen> {
         child: ListView.builder(
           controller: _scrollController,
           itemCount: quranProvider.surahs.length,
-          // Use cacheExtent to keep more items in memory for smoother scrolling
-          cacheExtent: 500,
+          // Reduce cacheExtent for better performance with large lists
+          cacheExtent: 300,
           itemBuilder: (context, index) {
             final surah = quranProvider.surahs[index];
             final isExpanded = quranProvider.expandedSurahId == surah.id;
@@ -109,23 +109,21 @@ class _SurahsScreenState extends State<SurahsScreen> {
               onToggle: (surahId) {
                 quranProvider.toggleSurahExpanded(surahId);
                 
-                // Scroll to make expanded card fully visible if needed
+                // Use simpler scrolling logic when expanding
                 if (!isExpanded) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    // Delay slightly to let the animation start
-                    Future.delayed(const Duration(milliseconds: 50), () {
-                      final RenderObject? renderObject = context.findRenderObject();
-                      final RenderAbstractViewport viewport = RenderAbstractViewport.of(renderObject);
-                      final offsets = viewport.getOffsetToReveal(renderObject!, 0.0);
-                      
-                      if (_scrollController.position.pixels > offsets.offset) {
-                        _scrollController.animateTo(
-                          offsets.offset,
+                    final context = _scrollController.position.context.notificationContext;
+                    if (context != null) {
+                      final renderObject = context.findRenderObject();
+                      if (renderObject != null) {
+                        _scrollController.position.ensureVisible(
+                          renderObject,
+                          alignment: 0.0,
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeInOut,
                         );
                       }
-                    });
+                    }
                   });
                 }
               },
