@@ -3,19 +3,19 @@ import 'package:kottab/config/app_colors.dart';
 import 'package:kottab/models/surah_model.dart';
 import 'package:kottab/utils/arabic_numbers.dart';
 import 'package:kottab/widgets/surahs/verse_set_card.dart';
+import 'package:kottab/providers/session_provider.dart';
+import 'package:provider/provider.dart';
 
 class SurahCard extends StatelessWidget {
   final Surah surah;
   final bool isExpanded;
   final Function(int) onToggle;
-  final Function(int, int, int) onAddVerseSet;
 
   const SurahCard({
     super.key,
     required this.surah,
     required this.isExpanded,
     required this.onToggle,
-    required this.onAddVerseSet,
   });
 
   @override
@@ -129,13 +129,9 @@ class SurahCard extends StatelessWidget {
             alignment: Alignment.topCenter,
             child: isExpanded
                 ? Container(
-              padding: const EdgeInsets.all(16),
-              color: AppColors.background,
-              child: Column(
-                children: [
-                  // Use a separate ListView Builder for verse sets to improve performance
-                  if (surah.verseSets.isNotEmpty)
-                    ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    color: AppColors.background,
+                    child: ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: surah.verseSets.length,
@@ -145,45 +141,12 @@ class SurahCard extends StatelessWidget {
                           child: VerseSetCard(
                             verseSet: surah.verseSets[index],
                             surahName: surah.arabicName,
+                            onReviewPressed: () => _handleReviewPressed(context, surah.verseSets[index]),
                           ),
                         );
                       },
                     ),
-
-                  // Add new verse set button
-                  InkWell(
-                    onTap: () => _showAddVerseSetDialog(context),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: Colors.grey.shade300,
-                          style: BorderStyle.solid,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.add,
-                            color: AppColors.textSecondary,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'إضافة مجموعة جديدة',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )
+                  )
                 : const SizedBox.shrink(),
           ),
         ],
@@ -191,233 +154,32 @@ class SurahCard extends StatelessWidget {
     );
   }
 
-  /// Show dialog to add a new verse set
-  void _showAddVerseSetDialog(BuildContext context) {
-    int startVerse = 1;
-    int endVerse = 10;
-
-    // Find the last verse in existing sets
-    if (surah.verseSets.isNotEmpty) {
-      final lastSet = surah.verseSets.reduce(
-              (a, b) => a.endVerse > b.endVerse ? a : b
-      );
-      startVerse = lastSet.endVerse + 1;
-      endVerse = startVerse + 9;
-
-      // Ensure we don't exceed the surah's verse count
-      if (endVerse > surah.verseCount) {
-        endVerse = surah.verseCount;
-      }
-    }
-
-    // Show dialog
-    showDialog(
-      context: context,
-      builder: (context) => AddVerseSetDialog(
-        surahName: surah.arabicName,
-        maxVerses: surah.verseCount,
-        initialStartVerse: startVerse,
-        initialEndVerse: endVerse,
-        onAdd: (start, end) {
-          Navigator.of(context).pop();
-          onAddVerseSet(surah.id, start, end);
-        },
-      ),
-    );
-  }
-}
-
-/// Dialog to add a new verse set
-class AddVerseSetDialog extends StatefulWidget {
-  final String surahName;
-  final int maxVerses;
-  final int initialStartVerse;
-  final int initialEndVerse;
-  final Function(int, int) onAdd;
-
-  const AddVerseSetDialog({
-    super.key,
-    required this.surahName,
-    required this.maxVerses,
-    required this.initialStartVerse,
-    required this.initialEndVerse,
-    required this.onAdd,
-  });
-
-  @override
-  State<AddVerseSetDialog> createState() => _AddVerseSetDialogState();
-}
-
-class _AddVerseSetDialogState extends State<AddVerseSetDialog> {
-  late int startVerse;
-  late int endVerse;
-
-  @override
-  void initState() {
-    super.initState();
-    startVerse = widget.initialStartVerse;
-    endVerse = widget.initialEndVerse;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Make sure we have valid verse ranges
-    if (startVerse > widget.maxVerses) {
-      startVerse = widget.maxVerses;
-    }
-    if (endVerse > widget.maxVerses) {
-      endVerse = widget.maxVerses;
-    }
+  /// Handle review button press
+  void _handleReviewPressed(BuildContext context, final verseSet) {
+    // Get the provider
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
     
-    return AlertDialog(
-      title: Text(
-        'إضافة مجموعة آيات جديدة',
-        style: Theme.of(context).textTheme.titleMedium,
-        textAlign: TextAlign.center,
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'سورة ${widget.surahName}',
-            style: Theme.of(context).textTheme.titleSmall,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-
-          // Range input
-          Row(
-            children: [
-              // Start verse
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'من الآية',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: DropdownButton<int>(
-                        value: startVerse,
-                        isExpanded: true,
-                        underline: const SizedBox(),
-                        items: List.generate(
-                          widget.maxVerses,
-                          (i) {
-                            final value = i + 1;
-                            return DropdownMenuItem<int>(
-                              value: value,
-                              child: Text(ArabicNumbers.toArabicDigits(value)),
-                            );
-                          },
-                        ),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              startVerse = value;
-                              if (endVerse < startVerse) {
-                                endVerse = startVerse;
-                              }
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 16),
-
-              // End verse
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'إلى الآية',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: DropdownButton<int>(
-                        value: endVerse,
-                        isExpanded: true,
-                        underline: const SizedBox(),
-                        items: List.generate(
-                          widget.maxVerses - startVerse + 1,
-                          (i) {
-                            final value = startVerse + i;
-                            // Ensure we don't exceed max verses
-                            if (value <= widget.maxVerses) {
-                              return DropdownMenuItem<int>(
-                                value: value,
-                                child: Text(ArabicNumbers.toArabicDigits(value)),
-                              );
-                            }
-                            return null;
-                          },
-                        ).where((item) => item != null).cast<DropdownMenuItem<int>>().toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              endVerse = value;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Number of verses
-          Text(
-            'عدد الآيات: ${ArabicNumbers.toArabicDigits(endVerse - startVerse + 1)}',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(
-            'إلغاء',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: () => widget.onAdd(startVerse, endVerse),
-          child: Text(
-            'إضافة',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Colors.white,
-            ),
-          ),
-        ),
-      ],
+    // Initialize a new session with this verse set's data
+    sessionProvider.startNewSession(
+      surahId: verseSet.surahId,
+      type: verseSet.status == MemorizationStatus.memorized 
+          ? SessionType.recentReview 
+          : SessionType.newMemorization,
+    );
+    
+    // Update verse range
+    sessionProvider.updateSessionVerseRange(
+      verseSet.startVerse, 
+      verseSet.endVerse
+    );
+    
+    // Show modal
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      isDismissible: false,
+      builder: (context) => const AddSessionModal(),
     );
   }
 }
