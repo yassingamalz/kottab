@@ -55,17 +55,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             // Weekly Schedule Section
             Container(
               margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
               child: Column(
                 children: [
                   // Header
@@ -74,9 +63,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: AppColors.primary,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        topRight: Radius.circular(16),
+                      gradient: LinearGradient(
+                        colors: [AppColors.primary, Color(0xFF10B981)],
+                        begin: Alignment.centerRight,
+                        end: Alignment.centerLeft,
                       ),
                     ),
                     child: Text(
@@ -88,8 +78,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     ),
                   ),
 
-                  // Days
-                  ...provider.weekSchedule.map((day) => DaySchedule(day: day)).toList(),
+                  // Days container with modern styling
+                  Container(
+                    color: Colors.white,
+                    child: Column(
+                      children: provider.weekSchedule.map((day) => 
+                        DaySchedule(day: day)
+                      ).toList(),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -99,11 +96,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
+                    blurRadius: 5,
                     offset: const Offset(0, 2),
                   ),
                 ],
@@ -115,14 +112,21 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: const BoxDecoration(
+                      color: Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        topRight: Radius.circular(16),
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                      border: Border(
+                        bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1),
                       ),
                     ),
                     child: Text(
                       'إعدادات الخوارزمية',
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0F172A),
+                      ),
                     ),
                   ),
 
@@ -167,39 +171,66 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.blueLight,
+                gradient: LinearGradient(
+                  colors: [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                ),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: AppColors.blue.withOpacity(0.3),
+                  color: Color(0x333B82F6),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x0F3B82F6),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: AppColors.blue,
-                        size: 20,
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Color(0x333B82F6),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            'i',
+                            style: TextStyle(
+                              color: Color(0xFF3B82F6),
+                              fontWeight: FontWeight.bold,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'كيف تعمل خوارزمية المراجعة؟',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: AppColors.blue,
-                          fontWeight: FontWeight.bold,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E40AF),
                         ),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
 
                   Text(
-                    'تستخدم الخوارزمية نظام التكرار المتباعد للمساعدة في تثبيت الحفظ. يتم مراجعة الآيات الجديدة بشكل متكرر في البداية، ثم تقل وتيرة المراجعة تدريجياً مع تحسن الحفظ.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.blue.withOpacity(0.8),
+                    'تستخدم الخوارزمية نظام التكرار المتباعد للمساعدة في تثبيت الحفظ. يتم مراجعة الآيات الجديدة بشكل متكرر في البداية، ثم تقل وتيرة المراجعة تدريجيًا مع تحسن الحفظ.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.6,
+                      color: Color(0xFF1E3A8A),
                     ),
                   ),
                 ],
