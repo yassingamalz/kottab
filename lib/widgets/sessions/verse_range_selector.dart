@@ -55,10 +55,25 @@ class _VerseRangeSelectorState extends State<VerseRangeSelector> {
 
   /// Find the selected surah from the list
   Surah _findSelectedSurah() {
-    return widget.surahs.firstWhere(
-          (surah) => surah.id == _selectedSurahId,
-      orElse: () => widget.surahs.first,
-    );
+    try {
+      return widget.surahs.firstWhere(
+        (surah) => surah.id == _selectedSurahId,
+        orElse: () => widget.surahs.isNotEmpty ? widget.surahs.first : Surah(
+          id: 1,
+          name: "Al-Fatihah",
+          arabicName: "الفاتحة",
+          verseCount: 7,
+        ),
+      );
+    } catch (e) {
+      // Fallback if list is empty
+      return Surah(
+        id: 1,
+        name: "Al-Fatihah",
+        arabicName: "الفاتحة",
+        verseCount: 7,
+      );
+    }
   }
 
   /// Handle surah change
@@ -237,14 +252,22 @@ class _VerseRangeSelectorState extends State<VerseRangeSelector> {
 
   /// Generate items for the surah dropdown with unique values
   List<DropdownMenuItem<int>> _generateSurahItems() {
-    final items = <DropdownMenuItem<int>>[];
+    if (widget.surahs.isEmpty) {
+      // Return a default item if no surahs are available
+      return [
+        const DropdownMenuItem<int>(
+          value: 1,
+          child: Text('1. الفاتحة'),
+        ),
+      ];
+    }
     
-    // Create a set to track used values and prevent duplicates
-    final Set<int> usedValues = {};
+    final items = <DropdownMenuItem<int>>[];
+    final Set<int> usedIds = {};
     
     for (final surah in widget.surahs) {
-      if (!usedValues.contains(surah.id)) {
-        usedValues.add(surah.id);
+      if (!usedIds.contains(surah.id)) {
+        usedIds.add(surah.id);
         
         items.add(DropdownMenuItem<int>(
           value: surah.id,
@@ -259,19 +282,12 @@ class _VerseRangeSelectorState extends State<VerseRangeSelector> {
   /// Generate items for the start verse dropdown with unique values
   List<DropdownMenuItem<int>> _generateStartVerseItems() {
     final items = <DropdownMenuItem<int>>[];
-    final Set<int> usedValues = {};
     
-    for (int i = 0; i < _selectedSurah.verseCount; i++) {
-      final verse = i + 1;
-      
-      if (!usedValues.contains(verse)) {
-        usedValues.add(verse);
-        
-        items.add(DropdownMenuItem<int>(
-          value: verse,
-          child: Text(ArabicNumbers.toArabicDigits(verse)),
-        ));
-      }
+    for (int i = 1; i <= _selectedSurah.verseCount; i++) {
+      items.add(DropdownMenuItem<int>(
+        value: i,
+        child: Text(ArabicNumbers.toArabicDigits(i)),
+      ));
     }
     
     return items;
@@ -280,19 +296,12 @@ class _VerseRangeSelectorState extends State<VerseRangeSelector> {
   /// Generate items for the end verse dropdown with unique values
   List<DropdownMenuItem<int>> _generateEndVerseItems() {
     final items = <DropdownMenuItem<int>>[];
-    final Set<int> usedValues = {};
     
-    for (int i = 0; i < _selectedSurah.verseCount - _startVerse + 1; i++) {
-      final verse = _startVerse + i;
-      
-      if (!usedValues.contains(verse)) {
-        usedValues.add(verse);
-        
-        items.add(DropdownMenuItem<int>(
-          value: verse,
-          child: Text(ArabicNumbers.toArabicDigits(verse)),
-        ));
-      }
+    for (int i = _startVerse; i <= _selectedSurah.verseCount; i++) {
+      items.add(DropdownMenuItem<int>(
+        value: i,
+        child: Text(ArabicNumbers.toArabicDigits(i)),
+      ));
     }
     
     return items;
