@@ -69,6 +69,7 @@ class SessionProvider extends ChangeNotifier {
   List<MemorizationSession> _recentSessions = [];
   List<Surah> _surahs = [];
   bool _isLoading = true;
+  bool _dataInitialized = false;
 
   /// The current session being edited (null if not editing)
   MemorizationSession? _currentSession;
@@ -94,11 +95,33 @@ class SessionProvider extends ChangeNotifier {
       } else if (_recentSessions.isEmpty) {
         _recentSessions = _createSampleSessions();
       }
+      
+      _dataInitialized = true;
     } catch (e) {
       print('Error loading session data: $e');
       // Create empty lists to avoid null errors
       _surahs = [];
       _recentSessions = [];
+      
+      // Try to initialize with default data
+      if (_surahs.isEmpty) {
+        _surahs = [
+          const Surah(
+            id: 1,
+            name: "Al-Fatihah",
+            arabicName: "الفاتحة",
+            verseCount: 7,
+          ),
+          const Surah(
+            id: 2,
+            name: "Al-Baqarah",
+            arabicName: "البقرة",
+            verseCount: 286,
+          ),
+        ];
+      }
+      
+      _dataInitialized = true;
     }
 
     _isLoading = false;
@@ -127,8 +150,8 @@ class SessionProvider extends ChangeNotifier {
     int surahId = 1,
     SessionType type = SessionType.newMemorization,
   }) {
-    if (_surahs.isEmpty) {
-      // No surahs available, load data first
+    // If data not initialized, load it first
+    if (!_dataInitialized || _surahs.isEmpty) {
       _loadData().then((_) {
         startNewSession(surahId: surahId, type: type);
       });
@@ -144,8 +167,13 @@ class SessionProvider extends ChangeNotifier {
       if (_surahs.isNotEmpty) {
         surah = _surahs.first;
       } else {
-        print('No surahs available');
-        return;
+        // Create a fallback surah
+        surah = const Surah(
+          id: 1,
+          name: "Al-Fatihah",
+          arabicName: "الفاتحة",
+          verseCount: 7,
+        );
       }
     }
 
@@ -175,6 +203,13 @@ class SessionProvider extends ChangeNotifier {
           if (endVerse > surah.verseCount) {
             endVerse = surah.verseCount;
           }
+          
+          // If startVerse is already past the surah's verse count,
+          // reset to verse 1 (this can happen with completed surahs)
+          if (startVerse > surah.verseCount) {
+            startVerse = 1;
+            endVerse = Math.min(startVerse + 4, surah.verseCount);
+          }
         }
       }
     }
@@ -203,8 +238,22 @@ class SessionProvider extends ChangeNotifier {
       surah = _surahs.firstWhere((s) => s.id == surahId);
     } catch (e) {
       print('Surah not found: $surahId');
-      return;
+      
+      // Try to find any surah as fallback
+      if (_surahs.isNotEmpty) {
+        surah = _surahs.first;
+      } else {
+        // Create a fallback surah if list is empty
+        surah = const Surah(
+          id: 1,
+          name: "Al-Fatihah", 
+          arabicName: "الفاتحة",
+          verseCount: 7,
+        );
+      }
     }
+
+    if (surah == null) return;
 
     // Reset verse range to valid values for this surah
     int startVerse = 1;
@@ -244,7 +293,14 @@ class SessionProvider extends ChangeNotifier {
       surah = _surahs.firstWhere((s) => s.id == _currentSession!.surahId);
     } catch (e) {
       print('Surah not found for validation: ${_currentSession!.surahId}');
-      return;
+      
+      // Create default surah if not found
+      surah = Surah(
+        id: _currentSession!.surahId,
+        name: "Surah ${_currentSession!.surahId}",
+        arabicName: "سورة ${_currentSession!.surahId}",
+        verseCount: Math.max(endVerse, 100),  // Assume at least endVerse length
+      );
     }
     
     // Validate the verse range
@@ -328,8 +384,12 @@ class SessionProvider extends ChangeNotifier {
     for (final id in memorizedSetIds.take(3)) {
       try {
         final parts = id.split(':');
+        if (parts.length != 2) continue;
+        
         final surahId = int.parse(parts[0]);
         final verseParts = parts[1].split('-');
+        if (verseParts.length != 2) continue;
+        
         final startVerse = int.parse(verseParts[0]);
         final endVerse = int.parse(verseParts[1]);
         
@@ -397,4 +457,10 @@ class SessionProvider extends ChangeNotifier {
       ),
     ];
   }
+}
+
+// Helper class for Math methods (since we reference Math.min, Math.max)
+class Math {
+  static int min(int a, int b) => a < b ? a : b;
+  static int max(int a, int b) => a > b ? a : b;
 }
