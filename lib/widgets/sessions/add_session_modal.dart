@@ -36,7 +36,9 @@ class _AddSessionModalState extends State<AddSessionModal> {
         }
 
         // Update notes controller
-        _notesController.text = session.notes;
+        if (!_isSubmitting) {
+          _notesController.text = session.notes;
+        }
 
         return Container(
           constraints: BoxConstraints(
@@ -152,23 +154,31 @@ class _AddSessionModalState extends State<AddSessionModal> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isSubmitting
-                          ? null
-                          : () {
-                        Navigator.of(context).pop();
-                        sessionProvider.clearCurrentSession();
-                      },
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'إلغاء',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: AppColors.textSecondary,
+                    child: Material(
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _isSubmitting
+                            ? null
+                            : () {
+                                Navigator.of(context).pop();
+                                sessionProvider.clearCurrentSession();
+                              },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'إلغاء',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -177,29 +187,33 @@ class _AddSessionModalState extends State<AddSessionModal> {
                   const SizedBox(width: 16),
 
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isSubmitting
-                          ? null
-                          : () => _handleSave(context, sessionProvider),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isSubmitting
-                          ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                          : Text(
-                        'حفظ',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: Colors.white,
+                    child: Material(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        onTap: _isSubmitting
+                            ? null
+                            : () => _handleSave(context, sessionProvider),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Center(
+                            child: _isSubmitting
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    'حفظ',
+                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                          ),
                         ),
                       ),
                     ),
