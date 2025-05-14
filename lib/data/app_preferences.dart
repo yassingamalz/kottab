@@ -12,7 +12,13 @@ class AppPreferences {
   /// Save user data to local storage
   static Future<bool> saveUser(User user) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.setString(_userKey, jsonEncode(user.toJson()));
+    try {
+      final userJson = jsonEncode(user.toJson());
+      return prefs.setString(_userKey, userJson);
+    } catch (e) {
+      print('Error saving user data: $e');
+      return false;
+    }
   }
 
   /// Load user data from local storage
@@ -20,22 +26,30 @@ class AppPreferences {
     final prefs = await SharedPreferences.getInstance();
     final userJson = prefs.getString(_userKey);
 
-    if (userJson != null) {
+    if (userJson != null && userJson.isNotEmpty) {
       try {
         return User.fromJson(jsonDecode(userJson));
       } catch (e) {
         print('Error loading user data: $e');
-        return null;
+        // Create a new user if the data is corrupted
+        return User.create();
       }
     }
 
-    return null;
+    // Create a new user if none exists
+    return User.create();
   }
 
   /// Save statistics to local storage
   static Future<bool> saveStatistics(Statistics stats) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.setString(_statsKey, jsonEncode(stats.toJson()));
+    try {
+      final statsJson = jsonEncode(stats.toJson());
+      return prefs.setString(_statsKey, statsJson);
+    } catch (e) {
+      print('Error saving statistics data: $e');
+      return false;
+    }
   }
 
   /// Load statistics from local storage
@@ -43,7 +57,7 @@ class AppPreferences {
     final prefs = await SharedPreferences.getInstance();
     final statsJson = prefs.getString(_statsKey);
 
-    if (statsJson != null) {
+    if (statsJson != null && statsJson.isNotEmpty) {
       try {
         return Statistics.fromJson(jsonDecode(statsJson));
       } catch (e) {
@@ -57,13 +71,25 @@ class AppPreferences {
   /// Save a list of memorized verse set IDs
   static Future<bool> saveMemorizedSets(List<String> setIds) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.setStringList(_memorizedSetsKey, setIds);
+    try {
+      // Ensure unique entries
+      final uniqueIds = setIds.toSet().toList();
+      return prefs.setStringList(_memorizedSetsKey, uniqueIds);
+    } catch (e) {
+      print('Error saving memorized sets: $e');
+      return false;
+    }
   }
 
   /// Load the list of memorized verse set IDs
   static Future<List<String>> loadMemorizedSets() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getStringList(_memorizedSetsKey) ?? [];
+    final ids = prefs.getStringList(_memorizedSetsKey);
+    if (ids != null) {
+      // Ensure unique IDs
+      return ids.toSet().toList();
+    }
+    return [];
   }
 
   /// Get user settings value with type safety
@@ -94,6 +120,16 @@ class AppPreferences {
   /// Clear all app data
   static Future<bool> clearAllData() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.clear();
+    try {
+      await prefs.remove(_userKey);
+      await prefs.remove(_statsKey);
+      await prefs.remove(_memorizedSetsKey);
+      // Or use this to remove all keys:
+      // await prefs.clear();
+      return true;
+    } catch (e) {
+      print('Error clearing app data: $e');
+      return false;
+    }
   }
 }
