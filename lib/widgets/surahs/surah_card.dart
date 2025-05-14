@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
 import 'package:kottab/models/surah_model.dart';
+import 'package:kottab/models/verse_set_model.dart';
 import 'package:kottab/utils/arabic_numbers.dart';
 import 'package:kottab/widgets/surahs/verse_set_card.dart';
 import 'package:kottab/providers/session_provider.dart';
+import 'package:kottab/widgets/sessions/add_session_modal.dart';
 import 'package:provider/provider.dart';
 
 class SurahCard extends StatelessWidget {
