@@ -1,3 +1,5 @@
+import 'dart:math' as Math;
+
 import 'package:flutter/foundation.dart';
 import 'package:kottab/data/app_preferences.dart';
 import 'package:kottab/data/quran_data.dart';
@@ -108,18 +110,18 @@ class ScheduleProvider extends ChangeNotifier {
   Future<void> updateSetting(String key, dynamic value) async {
     _isLoading = true;
     notifyListeners();
-    
+
     try {
       // Update in preferences
       await AppPreferences.saveSetting(key, value);
-      
+
       // Update local settings map
       _settings[key] = value;
-      
+
       // Reload user to ensure settings are consistent
       final user = await _memorizationService.getUser();
       _settings = Map<String, dynamic>.from(user.settings);
-      
+
       // Regenerate schedule with new settings
       _weekSchedule = await _generateWeekSchedule();
     } catch (e) {
