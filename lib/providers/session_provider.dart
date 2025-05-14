@@ -87,8 +87,13 @@ class SessionProvider extends ChangeNotifier {
       _surahs = await _memorizationService.getSurahsWithProgress();
 
       // In a real app, we would load recent sessions from storage
-      // For now, create some sample data
-      _recentSessions = _createSampleSessions();
+      // For now, try to load from the service if available
+      final List<String> memorizedSets = await _memorizationService.getAllMemorizedSetIds();
+      if (_recentSessions.isEmpty && memorizedSets.isNotEmpty) {
+        _recentSessions = _createSampleSessionsFromIds(memorizedSets);
+      } else if (_recentSessions.isEmpty) {
+        _recentSessions = _createSampleSessions();
+      }
     } catch (e) {
       print('Error loading session data: $e');
       // Create empty lists to avoid null errors
@@ -131,43 +136,55 @@ class SessionProvider extends ChangeNotifier {
     }
 
     // Find the surah
-    final surah = _surahs.firstWhere(
-          (s) => s.id == surahId,
-      orElse: () => _surahs.first,
-    );
+    Surah? surah;
+    try {
+      surah = _surahs.firstWhere((s) => s.id == surahId);
+    } catch (e) {
+      // If surah not found, use the first available
+      if (_surahs.isNotEmpty) {
+        surah = _surahs.first;
+      } else {
+        print('No surahs available');
+        return;
+      }
+    }
 
     // Find the next verse range to memorize
     int startVerse = 1;
     int endVerse = 5;
 
-    if (surah.verseSets.isNotEmpty) {
+    if (surah != null && surah.verseSets.isNotEmpty) {
       // Find first non-memorized set or use the last set + 1
-      final notStartedSet = surah.verseSets.firstWhere(
-            (set) => set.status == MemorizationStatus.notStarted,
-        orElse: () => surah.verseSets.last,
-      );
-
-      if (notStartedSet.status == MemorizationStatus.notStarted) {
+      try {
+        final notStartedSet = surah.verseSets.firstWhere(
+              (set) => set.status == MemorizationStatus.notStarted,
+        );
         startVerse = notStartedSet.startVerse;
         endVerse = notStartedSet.endVerse;
-      } else {
-        // Start after the last verse
-        startVerse = notStartedSet.endVerse + 1;
-        endVerse = startVerse + 4; // Default to 5 verses
-
-        // Make sure we don't exceed the surah's verse count
-        if (endVerse > surah.verseCount) {
-          endVerse = surah.verseCount;
+      } catch (e) {
+        // No not-started sets found, try to find the last set
+        if (surah.verseSets.isNotEmpty) {
+          final lastSet = surah.verseSets.reduce(
+                (a, b) => a.endVerse > b.endVerse ? a : b,
+          );
+          // Start after the last verse
+          startVerse = lastSet.endVerse + 1;
+          // Default to 5 verses or whatever is available
+          endVerse = startVerse + 4; 
+          // Make sure we don't exceed the surah's verse count
+          if (endVerse > surah.verseCount) {
+            endVerse = surah.verseCount;
+          }
         }
       }
     }
 
-    // Create a new session
+    // Create a new session with valid parameters
     _currentSession = MemorizationSession(
-      surahId: surah.id,
-      surahName: surah.arabicName,
-      startVerse: startVerse,
-      endVerse: endVerse,
+      surahId: surah?.id ?? 1,
+      surahName: surah?.arabicName ?? "الفاتحة",
+      startVerse: startVerse > 0 ? startVerse : 1,
+      endVerse: endVerse > 0 ? endVerse : (startVerse + 4),
       timestamp: DateTime.now(),
       type: type,
       quality: 0.8, // Default to 80%
@@ -181,10 +198,13 @@ class SessionProvider extends ChangeNotifier {
     if (_currentSession == null) return;
 
     // Find the surah
-    final surah = _surahs.firstWhere(
-          (s) => s.id == surahId,
-      orElse: () => _surahs.first,
-    );
+    Surah? surah;
+    try {
+      surah = _surahs.firstWhere((s) => s.id == surahId);
+    } catch (e) {
+      print('Surah not found: $surahId');
+      return;
+    }
 
     // Reset verse range to valid values for this surah
     int startVerse = 1;
@@ -218,25 +238,23 @@ class SessionProvider extends ChangeNotifier {
   void updateSessionVerseRange(int startVerse, int endVerse) {
     if (_currentSession == null) return;
 
-    // Validate verse range
-    final surah = _surahs.firstWhere(
-      (s) => s.id == _currentSession!.surahId,
-      orElse: () => _surahs.first,
-    );
-    
-    // Ensure verses are within valid range
-    if (startVerse > surah.verseCount) {
-      startVerse = surah.verseCount;
+    // Find the surah to validate verse range
+    Surah? surah;
+    try {
+      surah = _surahs.firstWhere((s) => s.id == _currentSession!.surahId);
+    } catch (e) {
+      print('Surah not found for validation: ${_currentSession!.surahId}');
+      return;
     }
     
-    if (endVerse > surah.verseCount) {
+    // Validate the verse range
+    if (startVerse < 1) startVerse = 1;
+    if (endVerse < startVerse) endVerse = startVerse;
+    if (surah != null && endVerse > surah.verseCount) {
       endVerse = surah.verseCount;
     }
-    
-    if (startVerse > endVerse) {
-      startVerse = endVerse;
-    }
 
+    // Update the current session with validated values
     _currentSession = _currentSession!.copyWith(
       startVerse: startVerse,
       endVerse: endVerse,
@@ -285,10 +303,14 @@ class SessionProvider extends ChangeNotifier {
         // Add to recent sessions
         _recentSessions.insert(0, _currentSession!);
 
+        // Update the statistics provider - force refresh all providers
+        await _memorizationService.refreshStatistics();
+        
         // Clear current session
         _currentSession = null;
 
-        notifyListeners();
+        // Reload data to get updated Surahs
+        await refreshData();
       }
 
       return success;
@@ -296,6 +318,46 @@ class SessionProvider extends ChangeNotifier {
       print('Error saving session: $e');
       return false;
     }
+  }
+
+  /// Create sample sessions from memorized set IDs
+  List<MemorizationSession> _createSampleSessionsFromIds(List<String> memorizedSetIds) {
+    final sessions = <MemorizationSession>[];
+    final now = DateTime.now();
+    
+    for (final id in memorizedSetIds.take(3)) {
+      try {
+        final parts = id.split(':');
+        final surahId = int.parse(parts[0]);
+        final verseParts = parts[1].split('-');
+        final startVerse = int.parse(verseParts[0]);
+        final endVerse = int.parse(verseParts[1]);
+        
+        // Find surah name
+        String surahName = "سورة $surahId";
+        try {
+          final surah = _surahs.firstWhere((s) => s.id == surahId);
+          surahName = surah.arabicName;
+        } catch (e) {
+          // Use default name
+        }
+        
+        sessions.add(MemorizationSession(
+          surahId: surahId,
+          surahName: surahName,
+          startVerse: startVerse,
+          endVerse: endVerse,
+          timestamp: now.subtract(Duration(days: sessions.length)),
+          type: SessionType.newMemorization,
+          quality: 0.9,
+          notes: 'تم الحفظ بنجاح',
+        ));
+      } catch (e) {
+        print('Error parsing memorized set ID: $id');
+      }
+    }
+    
+    return sessions;
   }
 
   /// Create sample sessions for demonstration
