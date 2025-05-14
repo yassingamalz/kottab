@@ -8,8 +8,6 @@ import 'package:kottab/widgets/stats/weekly_pattern.dart';
 import 'package:kottab/widgets/stats/stats_section.dart';
 import 'package:kottab/widgets/stats/milestone_card.dart';
 
-import '../config/app_theme.dart';
-
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
 
@@ -21,7 +19,7 @@ class _StatsScreenState extends State<StatsScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize data when screen is first loaded
+    // Force immediate data refresh when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<StatisticsProvider>(context, listen: false).refreshData();
     });
@@ -184,7 +182,7 @@ class _StatsScreenState extends State<StatsScreen> {
               child: Column(
                 children: [
                   // Most reviewed set
-                  if (provider.mostReviewedSet.isNotEmpty)
+                  if (provider.mostReviewedSet.isNotEmpty && provider.mostReviewedSetCount > 0)
                     Container(
                       width: double.infinity,
                       margin: const EdgeInsets.only(bottom: 24),
@@ -250,11 +248,12 @@ class _StatsScreenState extends State<StatsScreen> {
                       ),
                     ),
 
-                  // Weekly pattern
-                  WeeklyPattern(
-                    weekData: provider.weeklyPattern,
-                    maxValue: provider.maxDailyReviews,
-                  ),
+                  // Weekly pattern - prevent division by zero
+                  if (provider.maxDailyReviews > 0)
+                    WeeklyPattern(
+                      weekData: provider.weeklyPattern,
+                      maxValue: provider.maxDailyReviews > 0 ? provider.maxDailyReviews : 1,
+                    ),
 
                   const SizedBox(height: 16),
 
@@ -290,8 +289,11 @@ class _StatsScreenState extends State<StatsScreen> {
       return AppColors.primary;
     } else if (quality >= 0.6) {
       return Colors.amber.shade700;
-    } else {
+    } else if (quality > 0) {
       return Colors.red.shade700;
+    } else {
+      // Default color for 0 quality (no reviews yet)
+      return Colors.grey;
     }
   }
 }
