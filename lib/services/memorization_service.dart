@@ -55,7 +55,7 @@ class MemorizationService {
     );
   }
 
-  /// Record a memorization session
+  /// Record a memorization session with improved error checking
   Future<bool> recordMemorizationSession({
     required int surahId,
     required int startVerse,
@@ -64,36 +64,87 @@ class MemorizationService {
     String notes = '',
   }) async {
     try {
+      // Validate the parameters
+      if (surahId <= 0 || startVerse <= 0 || endVerse <= 0 || quality < 0 || quality > 1) {
+        print('Invalid session parameters: surahId=$surahId, verses=$startVerse-$endVerse, quality=$quality');
+        return false;
+      }
+
       // Get the verse set
       final setId = '$surahId:$startVerse-$endVerse';
+      print('Recording session for set: $setId');
+      
+      // Get surahs (this ensures we have valid data to work with)
       final surahs = await getSurahsWithProgress();
-      final surah = surahs.firstWhere((s) => s.id == surahId);
-
-      // Find the verse set
-      final setIndex = surah.verseSets.indexWhere((set) => set.id == setId);
-      if (setIndex == -1) {
-        throw Exception('Verse set not found');
+      final surahIndex = surahs.indexWhere((s) => s.id == surahId);
+      
+      if (surahIndex == -1) {
+        print('Surah not found: $surahId');
+        return false;
       }
-
-      // Update the verse set with the new review
-      final updatedSet = surah.verseSets[setIndex].addReview(quality, notes: notes);
-      final updatedSets = List<VerseSet>.from(surah.verseSets);
-      updatedSets[setIndex] = updatedSet;
-
-      // Update memorized sets list if needed
-      if (updatedSet.status == MemorizationStatus.memorized) {
-        final memorizedSets = await AppPreferences.loadMemorizedSets();
-        if (!memorizedSets.contains(setId)) {
-          memorizedSets.add(setId);
-          await AppPreferences.saveMemorizedSets(memorizedSets);
+      
+      final surah = surahs[surahIndex];
+      
+      // Find the verse set by ID
+      // If exact set not found, find all sets that overlap with the range
+      final matchingSets = surah.verseSets.where((set) {
+        return set.id == setId || 
+              (set.startVerse <= endVerse && set.endVerse >= startVerse);
+      }).toList();
+      
+      if (matchingSets.isEmpty) {
+        print('No matching verse sets found for $setId');
+        // Create a new verse set if none exists
+        final newSet = VerseSet.create(
+          surahId: surahId,
+          startVerse: startVerse,
+          endVerse: endVerse,
+        );
+        
+        // Add review directly to the new set
+        final updatedSet = newSet.addReview(quality, notes: notes);
+        
+        // Update memorized sets list if needed
+        if (updatedSet.status == MemorizationStatus.memorized) {
+          final memorizedSets = await AppPreferences.loadMemorizedSets();
+          if (!memorizedSets.contains(setId)) {
+            memorizedSets.add(setId);
+            await AppPreferences.saveMemorizedSets(memorizedSets);
+            print('Added new set to memorized sets: $setId');
+          }
         }
+        
+        // Update user statistics
+        await _updateStatistics(surahId, updatedSet);
+        
+        // Update user daily progress
+        await _updateUserProgress(updatedSet.verseCount);
+        
+        return true;
       }
-
-      // Update user statistics
-      await _updateStatistics(surahId, updatedSet);
+      
+      // Update each matching set with the new review
+      for (final set in matchingSets) {
+        // Update the verse set with the new review
+        final updatedSet = set.addReview(quality, notes: notes);
+        
+        // Update memorized sets list if needed
+        if (updatedSet.status == MemorizationStatus.memorized) {
+          final memorizedSets = await AppPreferences.loadMemorizedSets();
+          if (!memorizedSets.contains(set.id)) {
+            memorizedSets.add(set.id);
+            await AppPreferences.saveMemorizedSets(memorizedSets);
+            print('Added to memorized sets: ${set.id}');
+          }
+        }
+        
+        // Update user statistics
+        await _updateStatistics(surahId, updatedSet);
+      }
 
       // Update user daily progress
-      await _updateUserProgress(1);
+      final totalVerses = endVerse - startVerse + 1;
+      await _updateUserProgress(totalVerses);
 
       return true;
     } catch (e) {
@@ -187,6 +238,40 @@ class MemorizationService {
       'recent': topRecentSets,
       'old': topOldSets,
     };
+  }
+
+  /// Get all memorized set IDs
+  Future<List<String>> getAllMemorizedSetIds() async {
+    return await AppPreferences.loadMemorizedSets();
+  }
+  
+  /// Force refresh statistics
+  Future<void> refreshStatistics() async {
+    // Re-compute statistics from memorized sets
+    final memorizedSets = await AppPreferences.loadMemorizedSets();
+    final user = await getUser();
+    final stats = await AppPreferences.loadStatistics();
+    
+    // Update total memorized verses
+    int totalVerses = 0;
+    for (final setId in memorizedSets) {
+      try {
+        final parts = setId.split(':');
+        final verseParts = parts[1].split('-');
+        final startVerse = int.parse(verseParts[0]);
+        final endVerse = int.parse(verseParts[1]);
+        totalVerses += (endVerse - startVerse + 1);
+      } catch (e) {
+        // Skip invalid IDs
+      }
+    }
+    
+    // Update statistics
+    final updatedStats = stats.copyWith(
+      totalMemorizedVerses: totalVerses,
+    );
+    
+    await AppPreferences.saveStatistics(updatedStats);
   }
 
   /// Update user statistics after a memorization session
