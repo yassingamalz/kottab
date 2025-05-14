@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:kottab/data/app_preferences.dart';
-import 'package:kottab/models/verse_set_model.dart';
+import 'package:kottab/data/quran_data.dart';
 import 'package:kottab/services/memorization_service.dart';
+
+import '../models/surah_model.dart';
 
 /// Type of memorization session
 enum SessionType {
@@ -133,6 +135,9 @@ class ScheduleProvider extends ChangeNotifier {
     final today = DateTime(now.year, now.month, now.day);
     final weekSchedule = <DaySchedule>[];
 
+    // Get all Surahs for display names
+    final surahs = QuranData.getAllSurahs();
+
     // Generate today's plan
     final todayPlan = await _memorizationService.generateTodayPlan();
 
@@ -141,9 +146,18 @@ class ScheduleProvider extends ChangeNotifier {
 
     // Add new memorization sessions
     for (final verseSet in todayPlan['new'] ?? []) {
+      final surahName = surahs
+          .firstWhere((s) => s.id == verseSet.surahId,
+              orElse: () => const Surah(
+                  id: 0,
+                  name: "Unknown",
+                  arabicName: "غير معروف",
+                  verseCount: 0))
+          .arabicName;
+
       todaySessions.add(ScheduledSession(
         surahId: verseSet.surahId,
-        surahName: 'سورة ${verseSet.surahId}',
+        surahName: surahName,
         startVerse: verseSet.startVerse,
         endVerse: verseSet.endVerse,
         type: SessionType.newMemorization,
@@ -152,9 +166,18 @@ class ScheduleProvider extends ChangeNotifier {
 
     // Add recent review sessions
     for (final verseSet in todayPlan['recent'] ?? []) {
+      final surahName = surahs
+          .firstWhere((s) => s.id == verseSet.surahId,
+              orElse: () => const Surah(
+                  id: 0,
+                  name: "Unknown",
+                  arabicName: "غير معروف",
+                  verseCount: 0))
+          .arabicName;
+
       todaySessions.add(ScheduledSession(
         surahId: verseSet.surahId,
-        surahName: 'سورة ${verseSet.surahId}',
+        surahName: surahName,
         startVerse: verseSet.startVerse,
         endVerse: verseSet.endVerse,
         type: SessionType.recentReview,
@@ -163,9 +186,18 @@ class ScheduleProvider extends ChangeNotifier {
 
     // Add old review sessions
     for (final verseSet in todayPlan['old'] ?? []) {
+      final surahName = surahs
+          .firstWhere((s) => s.id == verseSet.surahId,
+              orElse: () => const Surah(
+                  id: 0,
+                  name: "Unknown",
+                  arabicName: "غير معروف",
+                  verseCount: 0))
+          .arabicName;
+
       todaySessions.add(ScheduledSession(
         surahId: verseSet.surahId,
-        surahName: 'سورة ${verseSet.surahId}',
+        surahName: surahName,
         startVerse: verseSet.startVerse,
         endVerse: verseSet.endVerse,
         type: SessionType.oldReview,
@@ -180,10 +212,9 @@ class ScheduleProvider extends ChangeNotifier {
     ));
 
     // Generate the rest of the week with placeholder sessions
-    // In a real app, this would use a more sophisticated algorithm
     for (int i = 1; i < 7; i++) {
       final date = today.add(Duration(days: i));
-      final sessions = _generatePlaceholderSessions();
+      final sessions = _generatePlaceholderSessions(surahs);
 
       weekSchedule.add(DaySchedule(
         date: date,
@@ -196,42 +227,47 @@ class ScheduleProvider extends ChangeNotifier {
   }
 
   /// Generate placeholder sessions for future days
-  /// This is a simplified version that just clones today's plan
-  List<ScheduledSession> _generatePlaceholderSessions() {
-    if (_weekSchedule.isEmpty || _weekSchedule[0].sessions.isEmpty) {
-      return [
-        const ScheduledSession(
-          surahId: 2,
-          surahName: 'سورة 2',
-          startVerse: 1,
-          endVerse: 10,
-          type: SessionType.newMemorization,
-        ),
-        const ScheduledSession(
-          surahId: 2,
-          surahName: 'سورة 2',
-          startVerse: 1,
-          endVerse: 20,
-          type: SessionType.recentReview,
-        ),
-        const ScheduledSession(
-          surahId: 1,
-          surahName: 'سورة 1',
-          startVerse: 1,
-          endVerse: 7,
-          type: SessionType.oldReview,
-        ),
-      ];
+  List<ScheduledSession> _generatePlaceholderSessions(List<Surah> surahs) {
+    // Create a mix of sessions
+    final List<ScheduledSession> sessions = [];
+
+    // New memorization
+    final surah =
+        surahs.firstWhere((s) => s.id == 2, orElse: () => surahs.first);
+    sessions.add(ScheduledSession(
+      surahId: surah.id,
+      surahName: surah.arabicName,
+      startVerse: 11,
+      endVerse: 11 + dailyVerseTarget - 1,
+      type: SessionType.newMemorization,
+    ));
+
+    // Add a recent review every other day
+    if (sessions.length % 2 == 0) {
+      sessions.add(ScheduledSession(
+        surahId: 2,
+        surahName: surahs
+            .firstWhere((s) => s.id == 2, orElse: () => surahs.first)
+            .arabicName,
+        startVerse: 1,
+        endVerse: 10,
+        type: SessionType.recentReview,
+      ));
     }
 
-    // Clone today's sessions but mark them as not completed
-    return _weekSchedule[0].sessions.map((session) => ScheduledSession(
-      surahId: session.surahId,
-      surahName: session.surahName,
-      startVerse: session.startVerse,
-      endVerse: session.endVerse,
-      type: session.type,
-      isCompleted: false,
-    )).toList();
+    // Add an old review every third day
+    if (sessions.length % 3 == 0) {
+      sessions.add(ScheduledSession(
+        surahId: 1,
+        surahName: surahs
+            .firstWhere((s) => s.id == 1, orElse: () => surahs.first)
+            .arabicName,
+        startVerse: 1,
+        endVerse: 7,
+        type: SessionType.oldReview,
+      ));
+    }
+
+    return sessions;
   }
 }
