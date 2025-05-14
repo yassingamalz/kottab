@@ -1,22 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:kottab/config/app_colors.dart';
 import 'package:kottab/models/verse_set_model.dart';
 import 'package:kottab/utils/arabic_numbers.dart';
 import 'package:kottab/utils/date_formatter.dart';
-import 'package:kottab/providers/session_provider.dart';
-import 'package:kottab/widgets/sessions/add_session_modal.dart';
 
 class VerseSetCard extends StatelessWidget {
   final VerseSet verseSet;
   final String surahName;
-  final VoidCallback? onReviewPressed;
+  final VoidCallback onReviewPressed;
 
   const VerseSetCard({
     super.key,
     required this.verseSet,
     required this.surahName,
-    this.onReviewPressed,
+    required this.onReviewPressed,
   });
 
   @override
@@ -123,18 +120,9 @@ class VerseSetCard extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // Review button
+          // Review button - directly use the provided callback
           ElevatedButton(
-            onPressed: isDisabled 
-                ? null 
-                : () {
-                    if (onReviewPressed != null) {
-                      onReviewPressed!();
-                    } else {
-                      // Show session modal if no callback is provided
-                      _showAddSessionModal(context);
-                    }
-                  },
+            onPressed: isDisabled ? null : onReviewPressed,
             style: ElevatedButton.styleFrom(
               backgroundColor: isDisabled ? Colors.grey.shade200 : AppColors.primary,
               foregroundColor: isDisabled ? Colors.grey.shade500 : Colors.white,
@@ -165,35 +153,6 @@ class VerseSetCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-  
-  // Add this method to show the session modal
-  void _showAddSessionModal(BuildContext context) {
-    // Get the provider
-    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
-    
-    // Initialize a new session with this verse set's data
-    sessionProvider.startNewSession(
-      surahId: verseSet.surahId,
-      type: verseSet.status == MemorizationStatus.memorized 
-          ? SessionType.recentReview 
-          : SessionType.newMemorization,
-    );
-    
-    // Update verse range
-    sessionProvider.updateSessionVerseRange(
-      verseSet.startVerse, 
-      verseSet.endVerse
-    );
-    
-    // Show modal
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      isDismissible: false,
-      builder: (context) => const AddSessionModal(),
     );
   }
 }
