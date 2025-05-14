@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:kottab/providers/statistics_provider.dart';
 import 'package:kottab/providers/settings_provider.dart';
 import 'package:kottab/providers/session_provider.dart';
+import 'package:kottab/models/user_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -337,15 +338,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // Process each session type
     for (final session in todaySchedule.sessions) {
       TaskType taskType;
+      double progress = 0.0;
+      
       switch (session.type) {
         case SessionType.newMemorization:
           taskType = TaskType.newMemorization;
+          progress = _newMemProgress;
           break;
         case SessionType.recentReview:
           taskType = TaskType.recentReview;
+          progress = _recentReviewProgress;
           break;
         case SessionType.oldReview:
           taskType = TaskType.oldReview;
+          progress = _oldReviewProgress;
           break;
       }
       
@@ -354,7 +360,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         type: taskType,
         completedVerses: session.isCompleted ? (session.endVerse - session.startVerse + 1) : 0,
         totalVerses: session.endVerse - session.startVerse + 1,
-        progress: session.isCompleted ? 1.0 : 0.0,
+        progress: session.isCompleted ? 1.0 : progress,
         isCompleted: session.isCompleted,
       ));
     }
@@ -366,7 +372,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         type: TaskType.newMemorization,
         completedVerses: 0,
         totalVerses: provider.dailyVerseTarget,
-        progress: 0.0,
+        progress: _newMemProgress,
       ));
     }
     
