@@ -165,31 +165,54 @@ class VerseSetCard extends StatelessWidget {
   void _handleReviewPressed(BuildContext context) {
     if (onReviewPressed != null) {
       onReviewPressed!();
-    } else {
+      return;
+    }
+    
+    try {
       // Show session modal with correct parameters
       final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
       
-      // Initialize a new session with proper parameters
-      sessionProvider.startNewSession(
-        surahId: verseSet.surahId,
-        type: verseSet.status == MemorizationStatus.memorized 
-            ? SessionType.recentReview 
-            : SessionType.newMemorization,
-      );
+      // Ensure we have the provider first
+      if (sessionProvider == null) {
+        print("Error: SessionProvider not found");
+        return;
+      }
       
-      // Explicitly update the verse range to match this set
-      sessionProvider.updateSessionVerseRange(
-        verseSet.startVerse, 
-        verseSet.endVerse
-      );
-      
-      // Show modal with correct parameters
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        isDismissible: false,
-        builder: (context) => const AddSessionModal(),
+      // Initialize a new session - make sure to wait for data to load if needed
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Clear any existing session first
+        sessionProvider.clearCurrentSession();
+        
+        // Start a new session with the correct parameters
+        sessionProvider.startNewSession(
+          surahId: verseSet.surahId,
+          type: verseSet.status == MemorizationStatus.memorized 
+              ? SessionType.recentReview 
+              : SessionType.newMemorization,
+        );
+        
+        // Explicitly update the verse range after session is initialized
+        Future.delayed(Duration(milliseconds: 100), () {
+          sessionProvider.updateSessionVerseRange(
+            verseSet.startVerse, 
+            verseSet.endVerse
+          );
+          
+          // Show the modal after settings are applied
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            isDismissible: false,
+            builder: (context) => const AddSessionModal(),
+          );
+        });
+      });
+    } catch (e) {
+      print("Error initializing session: $e");
+      // Show error snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('حدث خطأ أثناء إنشاء الجلسة. حاول مرة أخرى.'))
       );
     }
   }
