@@ -2,9 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:kottab/data/app_preferences.dart';
 import 'package:kottab/models/statistics_model.dart';
 import 'package:kottab/models/user_model.dart';
+import 'package:kottab/services/memorization_service.dart';
 
 /// Provider to manage user statistics data
 class StatisticsProvider extends ChangeNotifier {
+  final MemorizationService _memorizationService = MemorizationService();
   Statistics _statistics = Statistics.initial();
   User? _user;
   bool _isLoading = true;
@@ -21,6 +23,12 @@ class StatisticsProvider extends ChangeNotifier {
     try {
       _statistics = await AppPreferences.loadStatistics();
       _user = await AppPreferences.loadUser();
+      
+      // Force statistics to refresh from actual data
+      await _memorizationService.refreshStatistics();
+      
+      // Reload statistics after the refresh
+      _statistics = await AppPreferences.loadStatistics();
     } catch (e) {
       print('Error loading statistics: $e');
     }
@@ -64,11 +72,13 @@ class StatisticsProvider extends ChangeNotifier {
 
   /// Get the maximum number of reviews in a day
   int get maxDailyReviews {
-    if (_statistics.reviewsByDay.isEmpty) return 0;
+    if (_statistics.reviewsByDay.isEmpty) return 1; // Avoid division by zero
 
-    return _statistics.reviewsByDay.values.reduce(
-            (max, value) => max > value ? max : value
+    final max = _statistics.reviewsByDay.values.fold(0, 
+      (max, value) => value > max ? value : max
     );
+    
+    return max > 0 ? max : 1; // Ensure we don't return 0
   }
 
   /// Get the total number of reviews
