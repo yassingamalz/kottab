@@ -3,6 +3,9 @@ import 'package:kottab/config/app_colors.dart';
 import 'package:kottab/utils/arabic_numbers.dart';
 import 'package:kottab/utils/date_formatter.dart';
 import 'package:kottab/widgets/shared/circle_progress.dart';
+import 'package:provider/provider.dart';
+import 'package:kottab/providers/statistics_provider.dart';
+import 'package:kottab/providers/settings_provider.dart';
 
 class HeroSection extends StatefulWidget {
   final double newMemProgress;
@@ -102,177 +105,183 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final String formattedDate = DateFormatter.formatArabicDate(now);
+    return Consumer2<StatisticsProvider, SettingsProvider>(
+      builder: (context, statsProvider, settingsProvider, child) {
+        final now = DateTime.now();
+        final String formattedDate = DateFormatter.formatArabicDate(now);
+        final int streak = settingsProvider.user?.streak ?? widget.streak;
 
-    return Container(
-      width: double.infinity,
-      color: Colors.white,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Greeting and streak counter
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return Container(
+          width: double.infinity,
+          color: Colors.white,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              // Greeting and streak counter
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'مرحبًا بك',
-                    style: Theme.of(context).textTheme.titleLarge,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'مرحبًا بك',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      Text(
+                        formattedDate,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    formattedDate,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          ArabicNumbers.formatDayCount(streak),
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'يوم متتالي',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      ArabicNumbers.formatDayCount(widget.streak),
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'يوم متتالي',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
 
-          // Google Fit style progress circles
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Center(
-              child: AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  return SizedBox(
-                    height: 200, // Fixed height to contain all circles
-                    width: 200, // Fixed width to contain all circles
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Outer ring - Old review
-                        CircleProgress(
-                          progress: _oldReviewAnimation.value,
-                          color: AppColors.tertiary,
-                          size: 180,
-                          strokeWidth: 8,
-                        ),
-                        
-                        // Middle ring - Recent review
-                        CircleProgress(
-                          progress: _recentReviewAnimation.value,
-                          color: AppColors.secondary,
-                          size: 150,
-                          strokeWidth: 8,
-                        ),
-                        
-                        // Inner ring - New memorization
-                        CircleProgress(
-                          progress: _newMemAnimation.value,
-                          color: AppColors.primary,
-                          size: 120,
-                          strokeWidth: 8,
-                        ),
-                        
-                        // Center text
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
+              // Google Fit style progress circles
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: AnimatedBuilder(
+                    animation: _animationController,
+                    builder: (context, child) {
+                      return SizedBox(
+                        height: 200, // Fixed height to contain all circles
+                        width: 200, // Fixed width to contain all circles
+                        child: Stack(
+                          alignment: Alignment.center,
                           children: [
-                            Text(
-                              ArabicNumbers.formatPercentage(_getOverallProgress()),
-                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                            // Outer ring - Old review
+                            CircleProgress(
+                              progress: _oldReviewAnimation.value,
+                              color: AppColors.tertiary,
+                              size: 180,
+                              strokeWidth: 8,
                             ),
-                            Text(
-                              'الإنجاز',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
+                            
+                            // Middle ring - Recent review
+                            CircleProgress(
+                              progress: _recentReviewAnimation.value,
+                              color: AppColors.secondary,
+                              size: 150,
+                              strokeWidth: 8,
+                            ),
+                            
+                            // Inner ring - New memorization
+                            CircleProgress(
+                              progress: _newMemAnimation.value,
+                              color: AppColors.primary,
+                              size: 120,
+                              strokeWidth: 8,
+                            ),
+                            
+                            // Center text - use real stats
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  ArabicNumbers.formatPercentage(statsProvider.memorizedPercentage > 0 ? 
+                                      statsProvider.memorizedPercentage : _getOverallProgress()),
+                                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'الإنجاز',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+              
+              // Activity summaries
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // New memorization
+                  Container(
+                    width: 95, // Fixed width for each stat column
+                    height: 80, // Fixed height
+                    child: _buildActivitySummary(
+                      context,
+                      icon: Icons.bolt, 
+                      color: AppColors.primary,
+                      bgColor: AppColors.primaryLight,
+                      value: '${ArabicNumbers.toArabicDigits(widget.completedNewVerses)}/${ArabicNumbers.toArabicDigits(widget.targetNewVerses)}',
+                      label: 'حفظ جديد',
                     ),
-                  );
-                },
-              ),
-            ),
-          ),
-          
-          // Activity summaries
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              // New memorization
-              Container(
-                width: 95, // Fixed width for each stat column
-                height: 80, // Fixed height
-                child: _buildActivitySummary(
-                  context,
-                  icon: Icons.bolt, 
-                  color: AppColors.primary,
-                  bgColor: AppColors.primaryLight,
-                  value: '${ArabicNumbers.toArabicDigits(widget.completedNewVerses)}/${ArabicNumbers.toArabicDigits(widget.targetNewVerses)}',
-                  label: 'حفظ جديد',
-                ),
-              ),
-              
-              // Recent review
-              Container(
-                width: 95, // Fixed width for each stat column
-                height: 80, // Fixed height
-                child: _buildActivitySummary(
-                  context,
-                  icon: Icons.refresh, 
-                  color: AppColors.secondary,
-                  bgColor: AppColors.secondaryLight,
-                  value: '${ArabicNumbers.toArabicDigits(widget.completedRecentVerses)}/${ArabicNumbers.toArabicDigits(widget.targetRecentVerses)}',
-                  label: 'مراجعة حديثة',
-                ),
-              ),
-              
-              // Old review
-              Container(
-                width: 95, // Fixed width for each stat column
-                height: 80, // Fixed height
-                child: _buildActivitySummary(
-                  context,
-                  icon: Icons.replay, 
-                  color: AppColors.tertiary,
-                  bgColor: AppColors.tertiaryLight,
-                  value: '${ArabicNumbers.toArabicDigits(widget.completedOldVerses)}/${ArabicNumbers.toArabicDigits(widget.targetOldVerses)}',
-                  label: 'مراجعة سابقة',
-                ),
+                  ),
+                  
+                  // Recent review
+                  Container(
+                    width: 95, // Fixed width for each stat column
+                    height: 80, // Fixed height
+                    child: _buildActivitySummary(
+                      context,
+                      icon: Icons.refresh, 
+                      color: AppColors.secondary,
+                      bgColor: AppColors.secondaryLight,
+                      value: '${ArabicNumbers.toArabicDigits(widget.completedRecentVerses)}/${ArabicNumbers.toArabicDigits(widget.targetRecentVerses)}',
+                      label: 'مراجعة حديثة',
+                    ),
+                  ),
+                  
+                  // Old review
+                  Container(
+                    width: 95, // Fixed width for each stat column
+                    height: 80, // Fixed height
+                    child: _buildActivitySummary(
+                      context,
+                      icon: Icons.replay, 
+                      color: AppColors.tertiary,
+                      bgColor: AppColors.tertiaryLight,
+                      value: '${ArabicNumbers.toArabicDigits(widget.completedOldVerses)}/${ArabicNumbers.toArabicDigits(widget.targetOldVerses)}',
+                      label: 'مراجعة سابقة',
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
   
