@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:kottab/config/app_colors.dart';
 import 'package:kottab/models/verse_set_model.dart';
 import 'package:kottab/utils/arabic_numbers.dart';
 import 'package:kottab/utils/date_formatter.dart';
+import 'package:kottab/providers/session_provider.dart';
+import 'package:kottab/widgets/sessions/add_session_modal.dart';
 
 class VerseSetCard extends StatelessWidget {
   final VerseSet verseSet;
   final String surahName;
-  final VoidCallback onReviewPressed;
+  final VoidCallback? onReviewPressed;
 
   const VerseSetCard({
     super.key,
     required this.verseSet,
     required this.surahName,
-    required this.onReviewPressed,
+    this.onReviewPressed,
   });
 
   @override
@@ -23,7 +26,8 @@ class VerseSetCard extends StatelessWidget {
     late final Color textColor;
     late final Color borderColor;
     late final String statusText;
-    final bool isDisabled = verseSet.status == MemorizationStatus.notStarted;
+    // Allow recording even for not started sets - we'll consider it a new memorization
+    final bool isDisabled = false;
 
     switch (verseSet.status) {
       case MemorizationStatus.memorized:
@@ -120,39 +124,73 @@ class VerseSetCard extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // Review button - directly use the provided callback
-          ElevatedButton(
-            onPressed: isDisabled ? null : onReviewPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isDisabled ? Colors.grey.shade200 : AppColors.primary,
-              foregroundColor: isDisabled ? Colors.grey.shade500 : Colors.white,
-              disabledBackgroundColor: Colors.grey.shade200,
-              disabledForegroundColor: Colors.grey.shade500,
-              minimumSize: const Size(double.infinity, 40),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          // Review button - make sure it's always clickable
+          Material(
+            color: isDisabled ? Colors.grey.shade200 : AppColors.primary,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              onTap: isDisabled ? null : () => _handleReviewPressed(context),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: double.infinity,
+                height: 40,
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.refresh,
+                      size: 16,
+                      color: isDisabled ? Colors.grey.shade500 : Colors.white,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'تسجيل المراجعة',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: isDisabled ? Colors.grey.shade500 : Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.refresh,
-                  size: 16,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'تسجيل المراجعة',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isDisabled ? Colors.grey.shade500 : Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
             ),
           ),
         ],
       ),
     );
+  }
+  
+  // Direct handler for review button
+  void _handleReviewPressed(BuildContext context) {
+    if (onReviewPressed != null) {
+      onReviewPressed!();
+    } else {
+      // Show session modal with correct parameters
+      final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+      
+      // Initialize a new session with proper parameters
+      sessionProvider.startNewSession(
+        surahId: verseSet.surahId,
+        type: verseSet.status == MemorizationStatus.memorized 
+            ? SessionType.recentReview 
+            : SessionType.newMemorization,
+      );
+      
+      // Explicitly update the verse range to match this set
+      sessionProvider.updateSessionVerseRange(
+        verseSet.startVerse, 
+        verseSet.endVerse
+      );
+      
+      // Show modal with correct parameters
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        isDismissible: false,
+        builder: (context) => const AddSessionModal(),
+      );
+    }
   }
 }
