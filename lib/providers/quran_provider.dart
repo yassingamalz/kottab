@@ -79,46 +79,4 @@ class QuranProvider extends ChangeNotifier {
 
     return success;
   }
-
-  /// Add a new verse set to a surah
-  Future<bool> addVerseSet({
-    required int surahId,
-    required int startVerse,
-    required int endVerse,
-  }) async {
-    // Create a new verse set
-    final verseSet = VerseSet.create(
-      surahId: surahId,
-      startVerse: startVerse,
-      endVerse: endVerse,
-    );
-
-    // Find the surah and add the verse set
-    final surahIndex = _surahs.indexWhere((surah) => surah.id == surahId);
-    if (surahIndex == -1) return false;
-
-    // Check if this range overlaps with existing sets
-    final existingSets = _surahs[surahIndex].verseSets;
-    for (final set in existingSets) {
-      // Check if there's an overlap
-      if ((startVerse >= set.startVerse && startVerse <= set.endVerse) ||
-          (endVerse >= set.startVerse && endVerse <= set.endVerse) ||
-          (startVerse <= set.startVerse && endVerse >= set.endVerse)) {
-        return false; // Overlap detected
-      }
-    }
-
-    // Update the surah with the new verse set
-    final updatedSets = List<VerseSet>.from(existingSets)..add(verseSet);
-
-    // Sort the sets by start verse
-    updatedSets.sort((a, b) => a.startVerse.compareTo(b.startVerse));
-
-    // Update the surah
-    final updatedSurah = _surahs[surahIndex].copyWith(verseSets: updatedSets);
-    _surahs[surahIndex] = updatedSurah;
-
-    notifyListeners();
-    return true;
-  }
 }
