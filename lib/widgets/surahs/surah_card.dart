@@ -126,6 +126,7 @@ class SurahCard extends StatelessWidget {
           AnimatedSize(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
             child: isExpanded
                 ? Container(
               padding: const EdgeInsets.all(16),
@@ -260,6 +261,14 @@ class _AddVerseSetDialogState extends State<AddVerseSetDialog> {
 
   @override
   Widget build(BuildContext context) {
+    // Make sure we have valid verse ranges
+    if (startVerse > widget.maxVerses) {
+      startVerse = widget.maxVerses;
+    }
+    if (endVerse > widget.maxVerses) {
+      endVerse = widget.maxVerses;
+    }
+    
     return AlertDialog(
       title: Text(
         'إضافة مجموعة آيات جديدة',
@@ -303,10 +312,13 @@ class _AddVerseSetDialogState extends State<AddVerseSetDialog> {
                         underline: const SizedBox(),
                         items: List.generate(
                           widget.maxVerses,
-                              (i) => DropdownMenuItem(
-                            value: i + 1,
-                            child: Text(ArabicNumbers.toArabicDigits(i + 1)),
-                          ),
+                          (i) {
+                            final value = i + 1;
+                            return DropdownMenuItem<int>(
+                              value: value,
+                              child: Text(ArabicNumbers.toArabicDigits(value)),
+                            );
+                          },
                         ),
                         onChanged: (value) {
                           if (value != null) {
@@ -350,11 +362,18 @@ class _AddVerseSetDialogState extends State<AddVerseSetDialog> {
                         underline: const SizedBox(),
                         items: List.generate(
                           widget.maxVerses - startVerse + 1,
-                              (i) => DropdownMenuItem(
-                            value: startVerse + i,
-                            child: Text(ArabicNumbers.toArabicDigits(startVerse + i)),
-                          ),
-                        ),
+                          (i) {
+                            final value = startVerse + i;
+                            // Ensure we don't exceed max verses
+                            if (value <= widget.maxVerses) {
+                              return DropdownMenuItem<int>(
+                                value: value,
+                                child: Text(ArabicNumbers.toArabicDigits(value)),
+                              );
+                            }
+                            return null;
+                          },
+                        ).where((item) => item != null).cast<DropdownMenuItem<int>>().toList(),
                         onChanged: (value) {
                           if (value != null) {
                             setState(() {
