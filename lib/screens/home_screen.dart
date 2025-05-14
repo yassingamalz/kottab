@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
-import 'package:kottab/providers/schedule_provider.dart';
+import 'package:kottab/providers/schedule_provider.dart' as schedule_provider;
 import 'package:kottab/screens/activity_detail_screen.dart';
 import 'package:kottab/screens/achievements_screen.dart';
 import 'package:kottab/screens/weekly_detail_screen.dart';
@@ -14,7 +14,7 @@ import 'package:kottab/widgets/sessions/add_session_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:kottab/providers/statistics_provider.dart';
 import 'package:kottab/providers/settings_provider.dart';
-import 'package:kottab/providers/session_provider.dart';
+import 'package:kottab/providers/session_provider.dart' as session_provider;
 import 'package:kottab/models/user_model.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -62,8 +62,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void _refreshData() {
     final statsProvider = Provider.of<StatisticsProvider>(context, listen: false);
     final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
-    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
-    final scheduleProvider = Provider.of<ScheduleProvider>(context, listen: false);
+    final sessionProvider = Provider.of<session_provider.SessionProvider>(context, listen: false);
+    final scheduleProvider = Provider.of<schedule_provider.ScheduleProvider>(context, listen: false);
     
     // Refresh all providers
     statsProvider.refreshData();
@@ -82,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Consumer3<StatisticsProvider, SettingsProvider, ScheduleProvider>(
+      child: Consumer3<StatisticsProvider, SettingsProvider, schedule_provider.ScheduleProvider>(
         builder: (context, statsProvider, settingsProvider, scheduleProvider, child) {
           // Build dynamic weekly data from user progress
           final weeklyData = _buildWeeklyDataFromUser(settingsProvider);
@@ -301,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   
   // Build focus tasks from schedule and user data
-  List<FocusTaskData> _buildFocusTasksFromSchedule(ScheduleProvider provider) {
+  List<FocusTaskData> _buildFocusTasksFromSchedule(schedule_provider.ScheduleProvider provider) {
     if (provider.isLoading || provider.weekSchedule.isEmpty) {
       // Return sample data if no schedule
       return [
@@ -341,15 +341,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       double progress = 0.0;
       
       switch (session.type) {
-        case SessionType.newMemorization:
+        case schedule_provider.SessionType.newMemorization:
           taskType = TaskType.newMemorization;
           progress = _newMemProgress;
           break;
-        case SessionType.recentReview:
+        case schedule_provider.SessionType.recentReview:
           taskType = TaskType.recentReview;
           progress = _recentReviewProgress;
           break;
-        case SessionType.oldReview:
+        case schedule_provider.SessionType.oldReview:
           taskType = TaskType.oldReview;
           progress = _oldReviewProgress;
           break;
@@ -381,7 +381,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   
   // Build activities from recent sessions
   List<ActivityItem> _buildActivitiesFromRecentSessions(BuildContext context) {
-    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    final sessionProvider = Provider.of<session_provider.SessionProvider>(context, listen: false);
     final recentSessions = sessionProvider.recentSessions;
     
     if (recentSessions.isEmpty) {
@@ -421,12 +421,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       IconData icon;
       
       switch (session.type) {
-        case SessionType.newMemorization:
+        case session_provider.SessionType.newMemorization:
           activityType = ActivityType.memorization;
           icon = Icons.bolt;
           break;
-        case SessionType.recentReview:
-        case SessionType.oldReview:
+        case session_provider.SessionType.recentReview:
+        case session_provider.SessionType.oldReview:
           activityType = ActivityType.review;
           icon = Icons.refresh;
           break;
@@ -446,13 +446,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       
       String description;
       switch (session.type) {
-        case SessionType.newMemorization:
+        case session_provider.SessionType.newMemorization:
           description = "حفظت ${session.verseCount} آية بجودة ${(session.quality * 100).round()}٪";
           break;
-        case SessionType.recentReview:
+        case session_provider.SessionType.recentReview:
           description = "راجعت ${session.verseCount} آية حديثة بجودة ${(session.quality * 100).round()}٪";
           break;
-        case SessionType.oldReview:
+        case session_provider.SessionType.oldReview:
           description = "راجعت ${session.verseCount} آية سابقة بجودة ${(session.quality * 100).round()}٪";
           break;
       }
@@ -543,7 +543,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: ListView(
                 children: [
                   // Get details from schedule provider
-                  Consumer<ScheduleProvider>(
+                  Consumer<schedule_provider.ScheduleProvider>(
                     builder: (context, provider, child) {
                       // Show today's schedule information
                       if (provider.weekSchedule.isNotEmpty) {
@@ -590,11 +590,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                         Navigator.pop(context);
                                         
                                         // Start session
-                                        final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+                                        final sessionProvider = Provider.of<session_provider.SessionProvider>(context, listen: false);
                                         WidgetsBinding.instance.addPostFrameCallback((_) {
                                           sessionProvider.startNewSession(
                                             surahId: session.surahId,
-                                            type: session.type,
+                                            type: _convertSessionType(session.type),
                                           );
                                           
                                           // Update verse range
@@ -648,24 +648,36 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
   
-  String _getSessionTypeText(SessionType type) {
+  String _getSessionTypeText(schedule_provider.SessionType type) {
     switch (type) {
-      case SessionType.newMemorization:
+      case schedule_provider.SessionType.newMemorization:
         return 'حفظ جديد';
-      case SessionType.recentReview:
+      case schedule_provider.SessionType.recentReview:
         return 'مراجعة حديثة';
-      case SessionType.oldReview:
+      case schedule_provider.SessionType.oldReview:
         return 'مراجعة سابقة';
     }
   }
   
-  String _getSessionButtonText(SessionType type) {
+  String _getSessionButtonText(schedule_provider.SessionType type) {
     switch (type) {
-      case SessionType.newMemorization:
+      case schedule_provider.SessionType.newMemorization:
         return 'بدء الحفظ';
-      case SessionType.recentReview:
-      case SessionType.oldReview:
+      case schedule_provider.SessionType.recentReview:
+      case schedule_provider.SessionType.oldReview:
         return 'بدء المراجعة';
+    }
+  }
+  
+  // Convert between session provider types
+  session_provider.SessionType _convertSessionType(schedule_provider.SessionType type) {
+    switch (type) {
+      case schedule_provider.SessionType.newMemorization:
+        return session_provider.SessionType.newMemorization;
+      case schedule_provider.SessionType.recentReview:
+        return session_provider.SessionType.recentReview;
+      case schedule_provider.SessionType.oldReview:
+        return session_provider.SessionType.oldReview;
     }
   }
 }
