@@ -133,14 +133,22 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
         // Get today's progress if available
         final todayProgress = user?.todayProgress;
         
-        // Calculate daily progress percentage for display
+        // FIX: Calculate daily progress percentage for task completion
         double dailyProgressPercent = 0.0;
         String dailyProgressText = '٠٪';
         
         if (todayProgress != null) {
-          dailyProgressPercent = todayProgress.progress.clamp(0.0, 1.0);
-          dailyProgressText = ArabicNumbers.formatPercentage(dailyProgressPercent);
-          print("HERO: Using today's progress: ${todayProgress.completedVerses}/${todayProgress.targetVerses} (${dailyProgressPercent * 100}%)");
+          // FIX: If we've completed our target verses, show 100%
+          if (todayProgress.completedVerses >= todayProgress.targetVerses) {
+            dailyProgressPercent = 1.0; // 100%
+            dailyProgressText = ArabicNumbers.formatPercentage(1.0);
+            print("HERO: Using complete progress: ${todayProgress.completedVerses}/${todayProgress.targetVerses} (100%)");
+          } else {
+            // Otherwise show actual progress toward target
+            dailyProgressPercent = todayProgress.progress.clamp(0.0, 1.0);
+            dailyProgressText = ArabicNumbers.formatPercentage(dailyProgressPercent);
+            print("HERO: Using today's progress: ${todayProgress.completedVerses}/${todayProgress.targetVerses} (${dailyProgressPercent * 100}%)");
+          }
         } else {
           print("HERO: No daily progress found, using default values");
         }
@@ -148,11 +156,11 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
         // Get the actual progress directly from the statistics provider for overall stats
         final actualProgress = statsProvider.memorizedPercentage;
         
-        // Calculate more realistic progress values based on actual memorization status
-        // For visual differentiation, create slight variations using the actual progress
+        // FIX: For visual differentiation, create slight variations using the actual progress
+        // but ensure they reflect task completion status
         final newProgress = dailyProgressPercent;
-        final recentProgress = dailyProgressPercent * 0.95; // Slight variation for visual effect
-        final oldProgress = dailyProgressPercent * 0.9;  // Slight variation for visual effect
+        final recentProgress = dailyProgressPercent > 0.9 ? 1.0 : dailyProgressPercent * 0.95; 
+        final oldProgress = dailyProgressPercent > 0.8 ? 1.0 : dailyProgressPercent * 0.9;
         
         // Debug output to help diagnose issues
         print("HeroSection: Building with daily progress: ${dailyProgressPercent * 100}%");
@@ -290,7 +298,9 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                       color: AppColors.primary,
                       bgColor: AppColors.primaryLight,
                       value: todayProgress != null 
-                          ? '${ArabicNumbers.toArabicDigits(todayProgress.completedVerses)}/${ArabicNumbers.toArabicDigits(todayProgress.targetVerses)}'
+                          ? (todayProgress.completedVerses >= todayProgress.targetVerses)
+                              ? '١٠٠٪' // Show 100% if completed
+                              : '${ArabicNumbers.toArabicDigits(todayProgress.completedVerses)}/${ArabicNumbers.toArabicDigits(todayProgress.targetVerses)}'
                           : '${ArabicNumbers.toArabicDigits(0)}/${ArabicNumbers.toArabicDigits(user?.settings['dailyVerseTarget'] as int? ?? 10)}',
                       label: 'حفظ جديد',
                     ),
@@ -306,7 +316,9 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                       color: AppColors.secondary,
                       bgColor: AppColors.secondaryLight,
                       value: todayProgress != null 
-                          ? '${ArabicNumbers.toArabicDigits(todayProgress.completedVerses)}/${ArabicNumbers.toArabicDigits(todayProgress.targetVerses)}'
+                          ? (todayProgress.completedVerses >= todayProgress.targetVerses)
+                              ? '١٠٠٪' // Show 100% if completed
+                              : '${ArabicNumbers.toArabicDigits(todayProgress.completedVerses)}/${ArabicNumbers.toArabicDigits(todayProgress.targetVerses)}'
                           : '${ArabicNumbers.toArabicDigits(0)}/${ArabicNumbers.toArabicDigits(user?.settings['dailyVerseTarget'] as int? ?? 10)}',
                       label: 'مراجعة حديثة',
                     ),
@@ -322,7 +334,9 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                       color: AppColors.tertiary,
                       bgColor: AppColors.tertiaryLight,
                       value: todayProgress != null 
-                          ? '${ArabicNumbers.toArabicDigits(todayProgress.completedVerses)}/${ArabicNumbers.toArabicDigits(todayProgress.targetVerses)}'
+                          ? (todayProgress.completedVerses >= todayProgress.targetVerses)
+                              ? '١٠٠٪' // Show 100% if completed
+                              : '${ArabicNumbers.toArabicDigits(todayProgress.completedVerses)}/${ArabicNumbers.toArabicDigits(todayProgress.targetVerses)}'
                           : '${ArabicNumbers.toArabicDigits(0)}/${ArabicNumbers.toArabicDigits(user?.settings['dailyVerseTarget'] as int? ?? 10)}',
                       label: 'مراجعة سابقة',
                     ),
