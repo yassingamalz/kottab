@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kottab/config/app_colors.dart';
 import 'package:kottab/providers/session_provider.dart';
+import 'package:kottab/providers/statistics_provider.dart';
+import 'package:kottab/providers/quran_provider.dart';
+import 'package:kottab/providers/settings_provider.dart';
+import 'package:kottab/providers/schedule_provider.dart' as ScheduleProvider;
 import 'package:kottab/widgets/sessions/session_type_selector.dart';
 import 'package:kottab/widgets/sessions/verse_range_selector.dart';
 import 'package:kottab/widgets/sessions/session_quality_selector.dart';
@@ -22,6 +26,72 @@ class _AddSessionModalState extends State<AddSessionModal> {
   void dispose() {
     _notesController.dispose();
     super.dispose();
+  }
+
+  /// Handle save button press
+  Future<void> _handleSave(BuildContext context, SessionProvider provider) async {
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final success = await provider.saveCurrentSession();
+
+      if (!mounted) return;
+
+      if (success) {
+        // Force refresh all providers after session is saved
+        final statsProvider = Provider.of<StatisticsProvider>(context, listen: false);
+        final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+        final quranProvider = Provider.of<QuranProvider>(context, listen: false);
+        final scheduleProvider = Provider.of<ScheduleProvider.ScheduleProvider>(context, listen: false);
+        
+        // Refresh all data
+        statsProvider.refreshData();
+        settingsProvider.refreshData();
+        quranProvider.refreshData();
+        scheduleProvider.refreshData();
+        
+        // Close the modal
+        Navigator.of(context).pop();
+        
+        // Show success message
+        showCustomSnackBar(
+          context: context,
+          message: 'تم تسجيل الجلسة بنجاح!',
+          type: SnackBarType.success,
+        );
+        
+        // Force a rebuild of the providers after a short delay
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) {
+            // This extra notifyListeners call helps ensure UI updates
+            provider.notifyListeners();
+            statsProvider.notifyListeners();
+          }
+        });
+      } else {
+        showCustomSnackBar(
+          context: context,
+          message: 'حدث خطأ أثناء تسجيل الجلسة. يرجى المحاولة مرة أخرى.',
+          type: SnackBarType.error,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      showCustomSnackBar(
+        context: context,
+        message: 'حدث خطأ أثناء تسجيل الجلسة. يرجى المحاولة مرة أخرى.',
+        type: SnackBarType.error,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 
   @override
@@ -225,47 +295,5 @@ class _AddSessionModalState extends State<AddSessionModal> {
         );
       },
     );
-  }
-
-  /// Handle save button press
-  Future<void> _handleSave(BuildContext context, SessionProvider provider) async {
-    setState(() {
-      _isSubmitting = true;
-    });
-
-    try {
-      final success = await provider.saveCurrentSession();
-
-      if (!mounted) return;
-
-      if (success) {
-        Navigator.of(context).pop();
-        showCustomSnackBar(
-          context: context,
-          message: 'تم تسجيل الجلسة بنجاح!',
-          type: SnackBarType.success,
-        );
-      } else {
-        showCustomSnackBar(
-          context: context,
-          message: 'حدث خطأ أثناء تسجيل الجلسة. يرجى المحاولة مرة أخرى.',
-          type: SnackBarType.error,
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-
-      showCustomSnackBar(
-        context: context,
-        message: 'حدث خطأ أثناء تسجيل الجلسة. يرجى المحاولة مرة أخرى.',
-        type: SnackBarType.error,
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
-    }
   }
 }

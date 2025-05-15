@@ -94,11 +94,6 @@ class SessionProvider extends ChangeNotifier {
       // In a real app, we would load recent sessions from storage
       // For now, try to load from the service if available
       final List<String> memorizedSets = await _memorizationService.getAllMemorizedSetIds();
-      if (_recentSessions.isEmpty && memorizedSets.isNotEmpty) {
-        _recentSessions = _createSampleSessionsFromIds(memorizedSets);
-      } else if (_recentSessions.isEmpty) {
-        _recentSessions = _createSampleSessions();
-      }
       
       _dataInitialized = true;
     } catch (e) {
@@ -107,24 +102,6 @@ class SessionProvider extends ChangeNotifier {
       _surahs = [];
       _recentSessions = [];
       _dueSets = [];
-      
-      // Try to initialize with default data
-      if (_surahs.isEmpty) {
-        _surahs = [
-          const Surah(
-            id: 1,
-            name: "Al-Fatihah",
-            arabicName: "الفاتحة",
-            verseCount: 7,
-          ),
-          const Surah(
-            id: 2,
-            name: "Al-Baqarah",
-            arabicName: "البقرة",
-            verseCount: 286,
-          ),
-        ];
-      }
       
       _dataInitialized = true;
     }
@@ -494,8 +471,11 @@ class SessionProvider extends ChangeNotifier {
         // Clear current session
         _currentSession = null;
 
-        // Reload data to get updated Surahs and due sets
-        await refreshData();
+        // Get an updated list of due verse sets - this triggers changes
+        _dueSets = await _memorizationService.getDueVerseSets();
+
+        // Force notify listeners to ensure all UI is updated
+        notifyListeners();
       }
 
       return success;
@@ -547,44 +527,6 @@ class SessionProvider extends ChangeNotifier {
     }
     
     return sessions;
-  }
-
-  /// Create sample sessions for demonstration
-  List<MemorizationSession> _createSampleSessions() {
-    final now = DateTime.now();
-
-    return [
-      MemorizationSession(
-        surahId: 1,
-        surahName: 'الفاتحة',
-        startVerse: 1,
-        endVerse: 7,
-        timestamp: now.subtract(const Duration(hours: 2)),
-        type: SessionType.newMemorization,
-        quality: 0.9,
-        notes: 'آيات سهلة للحفظ',
-      ),
-      MemorizationSession(
-        surahId: 1,
-        surahName: 'الفاتحة',
-        startVerse: 1,
-        endVerse: 7,
-        timestamp: now.subtract(const Duration(days: 1)),
-        type: SessionType.recentReview,
-        quality: 1.0,
-        notes: 'مراجعة ممتازة',
-      ),
-      MemorizationSession(
-        surahId: 2,
-        surahName: 'البقرة',
-        startVerse: 1,
-        endVerse: 5,
-        timestamp: now.subtract(const Duration(days: 2)),
-        type: SessionType.newMemorization,
-        quality: 0.7,
-        notes: 'تحتاج إلى مزيد من المراجعة',
-      ),
-    ];
   }
 }
 

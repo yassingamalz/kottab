@@ -47,6 +47,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     });
   }
   
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // This ensures updates when returning from other screens
+    _refreshData();
+  }
+  
   void _refreshData() {
     final statsProvider = Provider.of<StatisticsProvider>(context, listen: false);
     final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
@@ -83,21 +90,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Consumer3<StatisticsProvider, SettingsProvider, ScheduleProvider.ScheduleProvider>(
-        builder: (context, statsProvider, settingsProvider, scheduleProvider, child) {
+      child: Consumer<SessionProvider>(
+        builder: (context, sessionProvider, _) {
+          final statsProvider = Provider.of<StatisticsProvider>(context);
+          final settingsProvider = Provider.of<SettingsProvider>(context);
+          final scheduleProvider = Provider.of<ScheduleProvider.ScheduleProvider>(context);
+          final quranProvider = Provider.of<QuranProvider>(context);
+          
           // Get user data
           final user = settingsProvider.user;
           final isFirstTime = _isFirstTimeUser(user);
           
           // Get Quran data
-          final quranProvider = Provider.of<QuranProvider>(context, listen: false);
           final surahs = quranProvider.surahs;
           
           // Build dynamic weekly data from user progress
           final weeklyData = _buildWeeklyDataFromUser(settingsProvider);
           
           // Get due verse sets from the session provider
-          final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
           final dueSets = sessionProvider.dueSets;
           
           // Build focus tasks - for first-time users, only show Al-Fatiha
@@ -124,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           
           // Build activities - empty for first-time users
           final hasActivities = !isFirstTime && sessionProvider.recentSessions.isNotEmpty;
-          final activities = hasActivities 
+          final List<ActivityItem> activities = hasActivities 
               ? _buildActivitiesFromRecentSessions(context)
               : [];
 
@@ -709,7 +719,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                         );
                                         
                                         // Update verse range
-                                        sessionProvider.updateSessionVerseRange(1, fatiha.verseCount);
+                                        sessionProvider.updateSessionVerseRange(1, fatiha!.verseCount);
                                         
                                         // Show modal
                                         showModalBottomSheet(
