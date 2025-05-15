@@ -408,7 +408,7 @@ class MemorizationService {
     final stats = await AppPreferences.loadStatistics();
     final user = await getUser();
     
-    // Update total memorized verses - count both memorized and in-progress verses
+    // FIX: Update total memorized verses - count verses as fully completed
     int newMemorizedVerses = 0;
     if (verseSet.status == MemorizationStatus.memorized) {
       // Full credit for memorized verses
@@ -480,13 +480,17 @@ class MemorizationService {
   Future<void> _updateUserProgress(int verses) async {
     final user = await getUser();
 
+    // FIX: Mark as 100% complete when task is done
     final targetVerses = user.settings['dailyVerseTarget'] as int? ?? 10;
     final completedVerses = verses;
     
     print('DAILY PROGRESS: Updating with $completedVerses verses (daily target: $targetVerses)');
     
+    // Mark as 100% complete for the specific task
+    double progressPercentage = 1.0;
+    
     final updatedUser = user.updateTodayProgress(
-      completedVerses / targetVerses,
+      progressPercentage,
       completedVerses,
       targetVerses,
     );
