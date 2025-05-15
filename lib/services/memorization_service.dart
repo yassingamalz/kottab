@@ -4,6 +4,7 @@ import 'package:kottab/models/surah_model.dart';
 import 'package:kottab/models/verse_set_model.dart';
 import 'package:kottab/models/user_model.dart';
 import 'package:kottab/models/statistics_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service class for managing memorization functionality
 class MemorizationService {
@@ -25,12 +26,21 @@ class MemorizationService {
     final memorizedSetIds = await AppPreferences.loadMemorizedSets();
     final surahs = QuranData.getAllSurahs();
 
-    print(
-        "MemorizationService: Loading Surahs with progress. Memorized sets: ${memorizedSetIds.length}");
-
+    print("MemorizationService: Loading Surahs with progress. Memorized sets: ${memorizedSetIds.length}");
+    
     // Print the memorized sets for debugging
     if (memorizedSetIds.isNotEmpty) {
       print("Current memorized sets: ${memorizedSetIds.join(", ")}");
+    }
+
+    // Load in-progress sets from preferences
+    final prefs = await SharedPreferences.getInstance();
+    final inProgressSets = prefs.getStringList('in_progress_sets') ?? [];
+    final inProgressMap = <String, double>{};
+    
+    for (final setId in inProgressSets) {
+      final progress = prefs.getDouble('progress_$setId') ?? 0.0;
+      inProgressMap[setId] = progress;
     }
 
     // Create surah copies with verse sets populated from stored progress
@@ -46,21 +56,25 @@ class MemorizationService {
         if (memorizedSetIds.contains(verseSetId)) {
           setData['status'] = MemorizationStatus.memorized.index;
           // Debug output when using a memorized set
-          print(
-              "Found memorized set: $verseSetId for surah ${surah.arabicName}");
+          print("Found memorized set: $verseSetId for surah ${surah.arabicName}");
+        } 
+        // Check if this set is in the in-progress list
+        else if (inProgressMap.containsKey(verseSetId)) {
+          setData['status'] = MemorizationStatus.inProgress.index;
+          setData['progressPercentage'] = inProgressMap[verseSetId];
+          print("Found in-progress set: $verseSetId with progress: ${inProgressMap[verseSetId]}");
         }
 
         return VerseSet.fromJson(setData);
       }).toList();
 
       final result = surah.copyWith(verseSets: verseSets);
-
+      
       // Debug output for surah progress
       if (result.memorizedPercentage > 0) {
-        print(
-            "Surah ${result.arabicName} progress: ${(result.memorizedPercentage * 100).toStringAsFixed(1)}%");
+        print("Surah ${result.arabicName} progress: ${(result.memorizedPercentage * 100).toStringAsFixed(1)}%");
       }
-
+      
       return result;
     }).toList();
   }
@@ -69,7 +83,7 @@ class MemorizationService {
   Future<Surah> getSurahWithProgress(int surahId) async {
     final surahs = await getSurahsWithProgress();
     return surahs.firstWhere(
-      (surah) => surah.id == surahId,
+          (surah) => surah.id == surahId,
       orElse: () => throw Exception('Surah with ID $surahId not found'),
     );
   }
@@ -77,17 +91,39 @@ class MemorizationService {
   /// Generate a verse set respecting surah boundaries
   VerseSet generateVerseSet(int surahId, int startVerse, int maxVerseCount) {
     final surah = QuranData.getSurahById(surahId);
-
+    
     // Ensure we don't exceed the surah's verse count
-    final endVerse = startVerse + maxVerseCount - 1 <= surah.verseCount
-        ? startVerse + maxVerseCount - 1
+    final endVerse = startVerse + maxVerseCount - 1 <= surah.verseCount 
+        ? startVerse + maxVerseCount - 1 
         : surah.verseCount;
-
+    
     return VerseSet.create(
       surahId: surahId,
       startVerse: startVerse,
       endVerse: endVerse,
     );
+  }
+
+  /// Save the progress for in-progress verse sets
+  Future<void> saveInProgressSet(String setId, double progress) async {
+    try {
+      // Create a new preference key for in-progress sets
+      final prefs = await SharedPreferences.getInstance();
+      final inProgressSets = prefs.getStringList('in_progress_sets') ?? [];
+      
+      // Add set ID if not already there
+      if (!inProgressSets.contains(setId)) {
+        inProgressSets.add(setId);
+        await prefs.setStringList('in_progress_sets', inProgressSets);
+      }
+      
+      // Save progress value for this set
+      await prefs.setDouble('progress_$setId', progress);
+      
+      print('STORAGE: Saved in-progress set: $setId with progress: $progress');
+    } catch (e) {
+      print('Error saving in-progress set: $e');
+    }
   }
 
   /// Record a memorization session with improved error checking and SM-2 algorithm
@@ -100,44 +136,37 @@ class MemorizationService {
   }) async {
     try {
       // Validate the parameters
-      if (surahId <= 0 ||
-          startVerse <= 0 ||
-          endVerse <= 0 ||
-          quality < 0 ||
-          quality > 1) {
-        print(
-            'Invalid session parameters: surahId=$surahId, verses=$startVerse-$endVerse, quality=$quality');
+      if (surahId <= 0 || startVerse <= 0 || endVerse <= 0 || quality < 0 || quality > 1) {
+        print('Invalid session parameters: surahId=$surahId, verses=$startVerse-$endVerse, quality=$quality');
         return false;
       }
 
       // Get the verse set
       final setId = '$surahId:$startVerse-$endVerse';
       print('Recording session for set: $setId with quality: $quality');
-
+      
       // Get surahs (this ensures we have valid data to work with)
       final surahs = await getSurahsWithProgress();
       final surahIndex = surahs.indexWhere((s) => s.id == surahId);
-
+      
       if (surahIndex == -1) {
         print('Surah not found: $surahId');
         return false;
       }
-
+      
       final surah = surahs[surahIndex];
-
+      
       // Find the verse set by ID
-      final matchingSetIndex =
-          surah.verseSets.indexWhere((set) => set.id == setId);
-
+      final matchingSetIndex = surah.verseSets.indexWhere((set) => set.id == setId);
+      
       if (matchingSetIndex == -1) {
         print('Verse set not found: $setId');
         // Create a new verse set if none exists
-        final newSet =
-            generateVerseSet(surahId, startVerse, endVerse - startVerse + 1);
-
+        final newSet = generateVerseSet(surahId, startVerse, endVerse - startVerse + 1);
+        
         // Add review directly to the new set
         final updatedSet = newSet.addReview(quality, notes: notes);
-
+        
         // Update memorized sets list if needed
         if (updatedSet.status == MemorizationStatus.memorized) {
           final memorizedSets = await AppPreferences.loadMemorizedSets();
@@ -146,24 +175,27 @@ class MemorizationService {
             await AppPreferences.saveMemorizedSets(memorizedSets);
             print('Added new set to memorized sets: $setId');
           }
+        } else if (updatedSet.status == MemorizationStatus.inProgress) {
+          await saveInProgressSet(setId, updatedSet.averageQuality);
+          print('Added new set to in-progress sets: $setId');
         }
-
+        
         // Update user statistics
         await _updateStatistics(surahId, updatedSet);
-
+        
         // Update user daily progress
         await _updateUserProgress(updatedSet.verseCount);
-
+        
         // Force a refresh of statistics to ensure UI updates
         await refreshStatistics();
-
+        
         return true;
       }
-
+      
       // Update the existing verse set with the new review
       final existingSet = surah.verseSets[matchingSetIndex];
       final updatedSet = existingSet.addReview(quality, notes: notes);
-
+      
       // Update memorized sets list if needed
       if (updatedSet.status == MemorizationStatus.memorized) {
         final memorizedSets = await AppPreferences.loadMemorizedSets();
@@ -172,14 +204,17 @@ class MemorizationService {
           await AppPreferences.saveMemorizedSets(memorizedSets);
           print('Added to memorized sets: $setId');
         }
+      } else if (updatedSet.status == MemorizationStatus.inProgress) {
+        await saveInProgressSet(setId, updatedSet.averageQuality);
+        print('Added to in-progress sets: $setId');
       }
-
+      
       // Update user statistics
       await _updateStatistics(surahId, updatedSet);
-
+      
       // Update user daily progress
       await _updateUserProgress(updatedSet.verseCount);
-
+      
       // Force a refresh of statistics to ensure UI updates
       await refreshStatistics();
 
@@ -216,11 +251,10 @@ class MemorizationService {
         if (set.nextReviewDate == null || set.nextReviewDate!.isAfter(today)) {
           continue;
         }
-
+        
         // Categorize based on repetition count and status
         if (set.status == MemorizationStatus.notStarted) {
-          if (newSets.length < 1) {
-            // Limit to one new set per day
+          if (newSets.length < 1) { // Limit to one new set per day
             newSets.add(set);
           }
         } else if (set.repetitionCount <= 2) {
@@ -232,7 +266,7 @@ class MemorizationService {
         }
       }
     }
-
+    
     // If no new sets are due, find the next not started set
     if (newSets.isEmpty) {
       for (final surah in surahs) {
@@ -278,17 +312,17 @@ class MemorizationService {
   Future<List<String>> getAllMemorizedSetIds() async {
     return await AppPreferences.loadMemorizedSets();
   }
-
+  
   /// Force refresh statistics to ensure progress is accurately reflected
   Future<void> refreshStatistics() async {
     // Load all surahs to also find in-progress sets
     final surahs = await getSurahsWithProgress();
     final user = await getUser();
     final stats = await AppPreferences.loadStatistics();
-
+    
     // Count both memorized and in-progress verses
     int totalVerses = 0;
-
+    
     // Count all memorized sets from stored list
     final memorizedSets = await AppPreferences.loadMemorizedSets();
     for (final setId in memorizedSets) {
@@ -303,32 +337,43 @@ class MemorizationService {
         print('Error processing set ID: $setId - $e');
       }
     }
-
-    // Also add partial credit for in-progress sets from all surahs
-    for (final surah in surahs) {
-      for (final set in surah.verseSets) {
-        if (set.status == MemorizationStatus.inProgress) {
-          // Add partial credit based on the average quality
-          final partialVerses = (set.verseCount * set.averageQuality).round();
-          totalVerses += partialVerses;
-          print('REFRESH: Adding $partialVerses partially memorized verses from ${set.id}');
-        }
+    
+    // Also add partial credit for in-progress sets
+    final prefs = await SharedPreferences.getInstance();
+    final inProgressSets = prefs.getStringList('in_progress_sets') ?? [];
+    for (final setId in inProgressSets) {
+      try {
+        final parts = setId.split(':');
+        final verseParts = parts[1].split('-');
+        final startVerse = int.parse(verseParts[0]);
+        final endVerse = int.parse(verseParts[1]);
+        final verseCount = endVerse - startVerse + 1;
+        
+        // Get saved progress for this set
+        final progress = prefs.getDouble('progress_$setId') ?? 0.0;
+        
+        // Calculate partial verses
+        final partialVerses = (verseCount * progress).round();
+        totalVerses += partialVerses;
+        print('REFRESH: Adding $partialVerses partially memorized verses from $setId (stored progress: $progress)');
+      } catch (e) {
+        print('Error processing in-progress set ID: $setId - $e');
       }
     }
-
+    
     // Update statistics
     final updatedStats = stats.copyWith(
       totalMemorizedVerses: totalVerses,
     );
-
+    
     await AppPreferences.saveStatistics(updatedStats);
-
+    
     // Debugging information
     print('REFRESH: Statistics refreshed with in-progress sets included');
     print('REFRESH: Total memorized verses: $totalVerses');
     print('REFRESH: Fully memorized sets count: ${memorizedSets.length}');
     print('REFRESH: Quran percentage: ${updatedStats.quranPercentage * 100}%');
-
+    
     // Also update user's total memorized verses
     if (user != null) {
       final updatedUser = user.copyWith(
@@ -343,17 +388,18 @@ class MemorizationService {
     final surahs = await getSurahsWithProgress();
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-
+    
     final dueSets = <VerseSet>[];
-
+    
     for (final surah in surahs) {
       for (final set in surah.verseSets) {
-        if (set.nextReviewDate != null && !set.nextReviewDate!.isAfter(today)) {
+        if (set.nextReviewDate != null && 
+            !set.nextReviewDate!.isAfter(today)) {
           dueSets.add(set);
         }
       }
     }
-
+    
     return dueSets;
   }
 
@@ -361,7 +407,7 @@ class MemorizationService {
   Future<void> _updateStatistics(int surahId, VerseSet verseSet) async {
     final stats = await AppPreferences.loadStatistics();
     final user = await getUser();
-
+    
     // Update total memorized verses - count both memorized and in-progress verses
     int newMemorizedVerses = 0;
     if (verseSet.status == MemorizationStatus.memorized) {
@@ -417,7 +463,7 @@ class MemorizationService {
 
     // Save the updated statistics
     await AppPreferences.saveStatistics(updatedStats);
-
+    
     // Also update user's total memorized verses
     if (user != null) {
       final updatedUser = user.copyWith(
@@ -425,7 +471,7 @@ class MemorizationService {
       );
       await AppPreferences.saveUser(updatedUser);
     }
-
+    
     print('PROGRESS UPDATE: Statistics updated: Total memorized verses = ${updatedStats.totalMemorizedVerses}');
     print('PROGRESS UPDATE: Quran percentage = ${updatedStats.quranPercentage * 100}%');
   }
@@ -450,22 +496,14 @@ class MemorizationService {
   /// Get day name from weekday number
   String _getDayName(int weekday) {
     switch (weekday) {
-      case 1:
-        return 'Monday';
-      case 2:
-        return 'Tuesday';
-      case 3:
-        return 'Wednesday';
-      case 4:
-        return 'Thursday';
-      case 5:
-        return 'Friday';
-      case 6:
-        return 'Saturday';
-      case 7:
-        return 'Sunday';
-      default:
-        return 'Unknown';
+      case 1: return 'Monday';
+      case 2: return 'Tuesday';
+      case 3: return 'Wednesday';
+      case 4: return 'Thursday';
+      case 5: return 'Friday';
+      case 6: return 'Saturday';
+      case 7: return 'Sunday';
+      default: return 'Unknown';
     }
   }
 }
