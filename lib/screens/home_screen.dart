@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
-import 'package:kottab/providers/schedule_provider.dart';
+import 'package:kottab/providers/schedule_provider.dart' as ScheduleProvider;
 import 'package:kottab/screens/activity_detail_screen.dart';
 import 'package:kottab/screens/achievements_screen.dart';
 import 'package:kottab/screens/weekly_detail_screen.dart';
@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final statsProvider = Provider.of<StatisticsProvider>(context, listen: false);
     final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
     final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
-    final scheduleProvider = Provider.of<ScheduleProvider>(context, listen: false);
+    final scheduleProvider = Provider.of<ScheduleProvider.ScheduleProvider>(context, listen: false);
     
     // Refresh all providers
     statsProvider.refreshData();
@@ -64,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Consumer3<StatisticsProvider, SettingsProvider, ScheduleProvider>(
+      child: Consumer3<StatisticsProvider, SettingsProvider, ScheduleProvider.ScheduleProvider>(
         builder: (context, statsProvider, settingsProvider, scheduleProvider, child) {
           // Build dynamic weekly data from user progress
           final weeklyData = _buildWeeklyDataFromUser(settingsProvider);
@@ -297,7 +297,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   
   // Build focus tasks from schedule and user data
-  List<FocusTaskData> _buildFocusTasksFromSchedule(ScheduleProvider provider) {
+  List<FocusTaskData> _buildFocusTasksFromSchedule(ScheduleProvider.ScheduleProvider provider) {
     if (provider.isLoading || provider.weekSchedule.isEmpty) {
       // Return sample data if no schedule
       return [
@@ -335,13 +335,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     for (final session in todaySchedule.sessions) {
       TaskType taskType;
       switch (session.type) {
-        case SessionType.newMemorization:
+        case ScheduleProvider.SessionType.newMemorization:
           taskType = TaskType.newMemorization;
           break;
-        case SessionType.recentReview:
+        case ScheduleProvider.SessionType.recentReview:
           taskType = TaskType.recentReview;
           break;
-        case SessionType.oldReview:
+        case ScheduleProvider.SessionType.oldReview:
           taskType = TaskType.oldReview;
           break;
       }
@@ -534,7 +534,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: ListView(
                 children: [
                   // Get details from schedule provider
-                  Consumer<ScheduleProvider>(
+                  Consumer<ScheduleProvider.ScheduleProvider>(
                     builder: (context, provider, child) {
                       // Show today's schedule information
                       if (provider.weekSchedule.isNotEmpty) {
@@ -585,7 +585,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                         WidgetsBinding.instance.addPostFrameCallback((_) {
                                           sessionProvider.startNewSession(
                                             surahId: session.surahId,
-                                            type: session.type,
+                                            type: _convertScheduleSessionTypeToSessionType(session.type),
                                           );
                                           
                                           // Update verse range
@@ -639,24 +639,36 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
   
-  String _getSessionTypeText(SessionType type) {
+  String _getSessionTypeText(ScheduleProvider.SessionType type) {
     switch (type) {
-      case SessionType.newMemorization:
+      case ScheduleProvider.SessionType.newMemorization:
         return 'حفظ جديد';
-      case SessionType.recentReview:
+      case ScheduleProvider.SessionType.recentReview:
         return 'مراجعة حديثة';
-      case SessionType.oldReview:
+      case ScheduleProvider.SessionType.oldReview:
         return 'مراجعة سابقة';
     }
   }
   
-  String _getSessionButtonText(SessionType type) {
+  String _getSessionButtonText(ScheduleProvider.SessionType type) {
     switch (type) {
-      case SessionType.newMemorization:
+      case ScheduleProvider.SessionType.newMemorization:
         return 'بدء الحفظ';
-      case SessionType.recentReview:
-      case SessionType.oldReview:
+      case ScheduleProvider.SessionType.recentReview:
+      case ScheduleProvider.SessionType.oldReview:
         return 'بدء المراجعة';
+    }
+  }
+  
+  // Helper method to convert between SessionType from different providers
+  SessionType _convertScheduleSessionTypeToSessionType(ScheduleProvider.SessionType scheduleType) {
+    switch (scheduleType) {
+      case ScheduleProvider.SessionType.newMemorization:
+        return SessionType.newMemorization;
+      case ScheduleProvider.SessionType.recentReview:
+        return SessionType.recentReview;
+      case ScheduleProvider.SessionType.oldReview:
+        return SessionType.oldReview;
     }
   }
 }
