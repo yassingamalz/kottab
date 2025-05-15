@@ -97,8 +97,9 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
         // Get daily verse target from settings
         final int dailyTarget = scheduleProvider.dailyVerseTarget;
         
-        // Check if all tasks are completed
-        final bool allTasksCompleted = widget.tasks.every((task) => task.isCompleted);
+        // FIX: Check if all tasks are completed based on individual task state
+        final bool allTasksCompleted = widget.tasks.every((task) => 
+          task.isCompleted || task.completedVerses >= task.totalVerses);
 
         return Container(
           width: double.infinity,
@@ -147,7 +148,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
 
               const SizedBox(height: 16),
 
-              // Show message when all tasks are completed
+              // FIX: Improved completion message with next day's preview
               if (allTasksCompleted)
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -180,6 +181,10 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                         ),
                         textAlign: TextAlign.center,
                       ),
+                      
+                      // Preview of tomorrow's tasks if available
+                      if (scheduleProvider.weekSchedule.length > 1) 
+                        _buildTomorrowPreview(context, scheduleProvider.weekSchedule[1]),
                     ],
                   ),
                 )
@@ -242,6 +247,72 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
     );
   }
 
+  // FIX: New method to build tomorrow's preview
+  Widget _buildTomorrowPreview(BuildContext context, schedule_provider.DaySchedule tomorrowSchedule) {
+    if (tomorrowSchedule.sessions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        const Divider(),
+        const SizedBox(height: 8),
+        
+        Text(
+          'مهام الغد:',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        
+        const SizedBox(height: 8),
+        
+        // Show the first session as preview
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.primaryLight),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                _getSessionTypeIcon(tomorrowSchedule.sessions[0].type),
+                color: AppColors.primary,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${tomorrowSchedule.sessions[0].surahName} ${tomorrowSchedule.sessions[0].verseRange}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  // Helper for session type icons
+  IconData _getSessionTypeIcon(schedule_provider.SessionType type) {
+    switch (type) {
+      case schedule_provider.SessionType.newMemorization:
+        return Icons.bolt;
+      case schedule_provider.SessionType.recentReview:
+        return Icons.refresh;
+      case schedule_provider.SessionType.oldReview:
+        return Icons.replay;
+    }
+  }
+
   Widget _buildTaskCard(BuildContext context, FocusTaskData task, double animatedProgress) {
     Color borderColor;
     Color progressColor;
@@ -274,6 +345,9 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
         break;
     }
 
+    // FIX: Determine if task is completed based on verse count
+    final isTaskComplete = task.isCompleted || task.completedVerses >= task.totalVerses;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -288,10 +362,10 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
             child: Align(
               alignment: Alignment.centerRight,
               child: FractionallySizedBox(
-                widthFactor: task.isCompleted ? 1.0 : animatedProgress, // Always 100% for completed tasks
+                widthFactor: isTaskComplete ? 1.0 : animatedProgress, // Always 100% for completed tasks
                 child: Container(
                   decoration: BoxDecoration(
-                    color: task.isCompleted ? iconBgColor.withOpacity(0.4) : iconBgColor.withOpacity(0.2),
+                    color: isTaskComplete ? iconBgColor.withOpacity(0.4) : iconBgColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -339,7 +413,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
               ),
 
               // Status
-              task.isCompleted
+              isTaskComplete
                   ? Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
