@@ -68,6 +68,7 @@ class SessionProvider extends ChangeNotifier {
 
   List<MemorizationSession> _recentSessions = [];
   List<Surah> _surahs = [];
+  List<VerseSet> _dueSets = [];
   bool _isLoading = true;
   bool _dataInitialized = false;
 
@@ -86,6 +87,9 @@ class SessionProvider extends ChangeNotifier {
     try {
       // Load surahs for session creation
       _surahs = await _memorizationService.getSurahsWithProgress();
+      
+      // Load verse sets due for today
+      _dueSets = await _memorizationService.getDueVerseSets();
 
       // In a real app, we would load recent sessions from storage
       // For now, try to load from the service if available
@@ -102,6 +106,7 @@ class SessionProvider extends ChangeNotifier {
       // Create empty lists to avoid null errors
       _surahs = [];
       _recentSessions = [];
+      _dueSets = [];
       
       // Try to initialize with default data
       if (_surahs.isEmpty) {
@@ -138,6 +143,9 @@ class SessionProvider extends ChangeNotifier {
 
   /// Get available surahs
   List<Surah> get surahs => _surahs;
+  
+  /// Get verse sets due for today
+  List<VerseSet> get dueSets => _dueSets;
 
   /// Get the current session being edited
   MemorizationSession? get currentSession => _currentSession;
@@ -177,39 +185,99 @@ class SessionProvider extends ChangeNotifier {
       }
     }
 
-    // Find the next verse range to memorize
+    // Find the next verse range to memorize based on session type and due sets
     int startVerse = 1;
     int endVerse = 5;
-
-    if (surah != null && surah.verseSets.isNotEmpty) {
-      // Find first non-memorized set or use the last set + 1
-      try {
-        final notStartedSet = surah.verseSets.firstWhere(
-              (set) => set.status == MemorizationStatus.notStarted,
+    
+    if (type == SessionType.newMemorization) {
+      // For new memorization, find first non-memorized set
+      if (surah != null && surah.verseSets.isNotEmpty) {
+        // Try to find a due set first
+        VerseSet? dueSet = _dueSets.firstWhere(
+          (set) => set.surahId == surahId && set.status == MemorizationStatus.notStarted,
+          orElse: () => null as VerseSet,
         );
-        startVerse = notStartedSet.startVerse;
-        endVerse = notStartedSet.endVerse;
-      } catch (e) {
-        // No not-started sets found, try to find the last set
-        if (surah.verseSets.isNotEmpty) {
-          final lastSet = surah.verseSets.reduce(
-                (a, b) => a.endVerse > b.endVerse ? a : b,
-          );
-          // Start after the last verse
-          startVerse = lastSet.endVerse + 1;
-          // Default to 5 verses or whatever is available
-          endVerse = startVerse + 4; 
-          // Make sure we don't exceed the surah's verse count
-          if (endVerse > surah.verseCount) {
-            endVerse = surah.verseCount;
+        
+        if (dueSet != null) {
+          startVerse = dueSet.startVerse;
+          endVerse = dueSet.endVerse;
+        } else {
+          // Otherwise find first non-memorized set
+          try {
+            final notStartedSet = surah.verseSets.firstWhere(
+                  (set) => set.status == MemorizationStatus.notStarted,
+            );
+            startVerse = notStartedSet.startVerse;
+            endVerse = notStartedSet.endVerse;
+          } catch (e) {
+            // No not-started sets found, try to find the last set
+            if (surah.verseSets.isNotEmpty) {
+              final lastSet = surah.verseSets.reduce(
+                    (a, b) => a.endVerse > b.endVerse ? a : b,
+              );
+              // Start after the last verse
+              startVerse = lastSet.endVerse + 1;
+              
+              // Calculate end verse while respecting surah boundaries
+              // Apply the SM-2 rule: don't cross surah boundaries, and limit to verse count setting
+              final verseCount = dailyVerseTarget;
+              endVerse = Math.min(startVerse + verseCount - 1, surah.verseCount);
+              
+              // If startVerse is already past the surah's verse count,
+              // reset to verse 1 (this can happen with completed surahs)
+              if (startVerse > surah.verseCount) {
+                startVerse = 1;
+                endVerse = Math.min(startVerse + verseCount - 1, surah.verseCount);
+              }
+            }
+          }
+        }
+      }
+    } else {
+      // For reviews, find a due verse set
+      VerseSet? dueSet;
+      
+      if (type == SessionType.recentReview) {
+        // Find recent review due sets (repetition count <= 2)
+        dueSet = _dueSets.firstWhere(
+          (set) => set.surahId == surahId && 
+                  set.status != MemorizationStatus.notStarted && 
+                  set.repetitionCount <= 2,
+          orElse: () => null as VerseSet,
+        );
+      } else {
+        // Find old review due sets (repetition count > 2)
+        dueSet = _dueSets.firstWhere(
+          (set) => set.surahId == surahId && 
+                  set.status != MemorizationStatus.notStarted && 
+                  set.repetitionCount > 2,
+          orElse: () => null as VerseSet,
+        );
+      }
+      
+      if (dueSet != null) {
+        startVerse = dueSet.startVerse;
+        endVerse = dueSet.endVerse;
+      } else if (surah != null && surah.verseSets.isNotEmpty) {
+        // If no due sets found, use any verse set with appropriate status
+        try {
+          VerseSet? matchingSet;
+          if (type == SessionType.recentReview) {
+            matchingSet = surah.verseSets.firstWhere(
+                  (set) => set.status == MemorizationStatus.inProgress,
+            );
+          } else {
+            matchingSet = surah.verseSets.firstWhere(
+                  (set) => set.status == MemorizationStatus.memorized,
+            );
           }
           
-          // If startVerse is already past the surah's verse count,
-          // reset to verse 1 (this can happen with completed surahs)
-          if (startVerse > surah.verseCount) {
-            startVerse = 1;
-            endVerse = Math.min(startVerse + 4, surah.verseCount);
+          if (matchingSet != null) {
+            startVerse = matchingSet.startVerse;
+            endVerse = matchingSet.endVerse;
           }
+        } catch (e) {
+          // Use default values if no matching sets found
         }
       }
     }
@@ -227,6 +295,17 @@ class SessionProvider extends ChangeNotifier {
 
     notifyListeners();
   }
+
+  /// Get the default number of verses to memorize daily
+  int get dailyVerseTarget {
+    if (_settings.containsKey('dailyVerseTarget')) {
+      return _settings['dailyVerseTarget'];
+    }
+    return 10; // Default value
+  }
+  
+  /// User settings
+  Map<String, dynamic> _settings = {};
 
   /// Update the current session surah
   void updateSessionSurah(int surahId) {
@@ -255,13 +334,52 @@ class SessionProvider extends ChangeNotifier {
 
     if (surah == null) return;
 
-    // Reset verse range to valid values for this surah
-    int startVerse = 1;
-    int endVerse = startVerse + 4; // Default to 5 verses
+    // Calculate verse range based on the surah boundaries and session type
+    int startVerse, endVerse;
     
-    // Make sure we don't exceed the surah's verse count
-    if (endVerse > surah.verseCount) {
-      endVerse = surah.verseCount;
+    if (_currentSession!.type == SessionType.newMemorization) {
+      // For new memorization, find the first non-memorized verse set
+      VerseSet? notStartedSet;
+      try {
+        notStartedSet = surah.verseSets.firstWhere(
+              (set) => set.status == MemorizationStatus.notStarted,
+        );
+        startVerse = notStartedSet.startVerse;
+        endVerse = notStartedSet.endVerse;
+      } catch (e) {
+        // If no not-started sets, use defaults with surah boundary check
+        startVerse = 1;
+        endVerse = Math.min(startVerse + dailyVerseTarget - 1, surah.verseCount);
+      }
+    } else {
+      // For reviews, try to find appropriate verse sets
+      VerseSet? reviewSet;
+      if (_currentSession!.type == SessionType.recentReview) {
+        try {
+          reviewSet = surah.verseSets.firstWhere(
+                (set) => set.status == MemorizationStatus.inProgress,
+          );
+        } catch (e) {
+          reviewSet = null;
+        }
+      } else { // Old review
+        try {
+          reviewSet = surah.verseSets.firstWhere(
+                (set) => set.status == MemorizationStatus.memorized,
+          );
+        } catch (e) {
+          reviewSet = null;
+        }
+      }
+      
+      if (reviewSet != null) {
+        startVerse = reviewSet.startVerse;
+        endVerse = reviewSet.endVerse;
+      } else {
+        // Default with surah boundary check
+        startVerse = 1;
+        endVerse = Math.min(startVerse + 4, surah.verseCount);
+      }
     }
 
     // Update the current session
@@ -283,7 +401,7 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Update the current session verse range
+  /// Update the current session verse range with surah boundary check
   void updateSessionVerseRange(int startVerse, int endVerse) {
     if (_currentSession == null) return;
 
@@ -365,7 +483,7 @@ class SessionProvider extends ChangeNotifier {
         // Clear current session
         _currentSession = null;
 
-        // Reload data to get updated Surahs
+        // Reload data to get updated Surahs and due sets
         await refreshData();
       }
 
@@ -459,7 +577,7 @@ class SessionProvider extends ChangeNotifier {
   }
 }
 
-// Helper class for Math methods (since we reference Math.min, Math.max)
+// Helper class for Math methods
 class Math {
   static int min(int a, int b) => a < b ? a : b;
   static int max(int a, int b) => a > b ? a : b;
