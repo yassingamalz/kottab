@@ -44,6 +44,22 @@ class User {
         .toList();
   }
 
+  /// Get today's progress, if any
+  DailyProgress? get todayProgress {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    try {
+      return dailyProgress.firstWhere(
+        (p) => p.date.year == today.year && 
+               p.date.month == today.month && 
+               p.date.day == today.day
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Update the daily progress for today
   User updateTodayProgress(double progress, int completedVerses, int targetVerses) {
     final now = DateTime.now();
@@ -59,21 +75,27 @@ class User {
     List<DailyProgress> updatedProgress = List.from(dailyProgress);
 
     if (existingIndex >= 0) {
-      // Update existing progress
+      // Update existing progress - ADD to existing progress, not replace
+      final existing = updatedProgress[existingIndex];
+      final newCompleted = existing.completedVerses + completedVerses;
+      final newProgress = (newCompleted / targetVerses).clamp(0.0, 1.0);
+      
       updatedProgress[existingIndex] = DailyProgress(
         date: today,
-        progress: progress,
-        completedVerses: completedVerses,
+        progress: newProgress,
+        completedVerses: newCompleted,
         targetVerses: targetVerses,
       );
+      print("DAILY: Updated today's progress: $newCompleted/$targetVerses (${newProgress * 100}%)");
     } else {
       // Add new progress for today
       updatedProgress.add(DailyProgress(
         date: today,
-        progress: progress,
+        progress: progress.clamp(0.0, 1.0),
         completedVerses: completedVerses,
         targetVerses: targetVerses,
       ));
+      print("DAILY: Added new progress for today: $completedVerses/$targetVerses (${progress * 100}%)");
     }
 
     // Calculate streak

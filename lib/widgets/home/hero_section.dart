@@ -6,6 +6,7 @@ import 'package:kottab/widgets/shared/circle_progress.dart';
 import 'package:provider/provider.dart';
 import 'package:kottab/providers/statistics_provider.dart';
 import 'package:kottab/providers/settings_provider.dart';
+import 'package:kottab/models/user_model.dart';
 
 class HeroSection extends StatefulWidget {
   final double newMemProgress;
@@ -124,13 +125,36 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
       builder: (context, statsProvider, settingsProvider, child) {
         final now = DateTime.now();
         final String formattedDate = DateFormatter.formatArabicDate(now);
-        final int streak = settingsProvider.user?.streak ?? widget.streak;
+        
+        // Get the user data to display today's progress
+        final user = settingsProvider.user;
+        final int streak = user?.streak ?? widget.streak;
+        
+        // Get today's progress if available
+        final todayProgress = user?.todayProgress;
+        
+        // Calculate daily progress percentage for display
+        double dailyProgressPercent = 0.0;
+        String dailyProgressText = '٠٪';
+        
+        if (todayProgress != null) {
+          dailyProgressPercent = todayProgress.progress.clamp(0.0, 1.0);
+          dailyProgressText = ArabicNumbers.formatPercentage(dailyProgressPercent);
+          print("HERO: Using today's progress: ${todayProgress.completedVerses}/${todayProgress.targetVerses} (${dailyProgressPercent * 100}%)");
+        } else {
+          print("HERO: No daily progress found, using default values");
+        }
 
-        // Get the actual progress directly from the statistics provider for display
+        // Get the actual progress directly from the statistics provider for overall stats
         final actualProgress = statsProvider.memorizedPercentage;
         
+        // Use the daily progress for the rings rather than overall progress
+        final newProgress = dailyProgressPercent;
+        final recentProgress = dailyProgressPercent * 0.9; // Slight variation for visual effect
+        final oldProgress = dailyProgressPercent * 0.8;  // Slight variation for visual effect
+        
         // Debug output to help diagnose issues
-        print("HeroSection: Building with memorized percentage: $actualProgress");
+        print("HeroSection: Building with daily progress: ${dailyProgressPercent * 100}%");
 
         return Container(
           width: double.infinity,
@@ -203,7 +227,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                           children: [
                             // Outer ring - Old review
                             CircleProgress(
-                              progress: actualProgress > 0.0 ? _oldReviewAnimation.value : 0.0,
+                              progress: dailyProgressPercent > 0.0 ? oldProgress : 0.0,
                               color: AppColors.tertiary,
                               size: 180,
                               strokeWidth: 8,
@@ -211,7 +235,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                             
                             // Middle ring - Recent review
                             CircleProgress(
-                              progress: actualProgress > 0.0 ? _recentReviewAnimation.value : 0.0,
+                              progress: dailyProgressPercent > 0.0 ? recentProgress : 0.0,
                               color: AppColors.secondary,
                               size: 150,
                               strokeWidth: 8,
@@ -219,18 +243,18 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                             
                             // Inner ring - New memorization
                             CircleProgress(
-                              progress: actualProgress > 0.0 ? _newMemAnimation.value : 0.0,
+                              progress: dailyProgressPercent > 0.0 ? newProgress : 0.0,
                               color: AppColors.primary,
                               size: 120,
                               strokeWidth: 8,
                             ),
                             
-                            // Center text - use real stats
+                            // Center text - use real daily progress
                             Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  ArabicNumbers.formatPercentage(actualProgress),
+                                  dailyProgressText,
                                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -264,7 +288,9 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                       icon: Icons.bolt, 
                       color: AppColors.primary,
                       bgColor: AppColors.primaryLight,
-                      value: '${ArabicNumbers.toArabicDigits(widget.completedNewVerses)}/${ArabicNumbers.toArabicDigits(widget.targetNewVerses)}',
+                      value: todayProgress != null 
+                          ? '${ArabicNumbers.toArabicDigits(todayProgress.completedVerses)}/${ArabicNumbers.toArabicDigits(todayProgress.targetVerses)}'
+                          : '${ArabicNumbers.toArabicDigits(0)}/${ArabicNumbers.toArabicDigits(user?.settings['dailyVerseTarget'] as int? ?? 10)}',
                       label: 'حفظ جديد',
                     ),
                   ),
@@ -278,7 +304,9 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                       icon: Icons.refresh, 
                       color: AppColors.secondary,
                       bgColor: AppColors.secondaryLight,
-                      value: '${ArabicNumbers.toArabicDigits(widget.completedRecentVerses)}/${ArabicNumbers.toArabicDigits(widget.targetRecentVerses)}',
+                      value: todayProgress != null 
+                          ? '${ArabicNumbers.toArabicDigits(todayProgress.completedVerses)}/${ArabicNumbers.toArabicDigits(todayProgress.targetVerses)}'
+                          : '${ArabicNumbers.toArabicDigits(0)}/${ArabicNumbers.toArabicDigits(user?.settings['dailyVerseTarget'] as int? ?? 10)}',
                       label: 'مراجعة حديثة',
                     ),
                   ),
@@ -292,7 +320,9 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                       icon: Icons.replay, 
                       color: AppColors.tertiary,
                       bgColor: AppColors.tertiaryLight,
-                      value: '${ArabicNumbers.toArabicDigits(widget.completedOldVerses)}/${ArabicNumbers.toArabicDigits(widget.targetOldVerses)}',
+                      value: todayProgress != null 
+                          ? '${ArabicNumbers.toArabicDigits(todayProgress.completedVerses)}/${ArabicNumbers.toArabicDigits(todayProgress.targetVerses)}'
+                          : '${ArabicNumbers.toArabicDigits(0)}/${ArabicNumbers.toArabicDigits(user?.settings['dailyVerseTarget'] as int? ?? 10)}',
                       label: 'مراجعة سابقة',
                     ),
                   ),

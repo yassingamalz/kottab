@@ -482,15 +482,22 @@ class MemorizationService {
 
     final targetVerses = user.settings['dailyVerseTarget'] as int? ?? 10;
     final completedVerses = verses;
-    final progress = verses / targetVerses;
-
+    
+    print('DAILY PROGRESS: Updating with $completedVerses verses (daily target: $targetVerses)');
+    
     final updatedUser = user.updateTodayProgress(
-      progress.clamp(0.0, 1.0),
+      completedVerses / targetVerses,
       completedVerses,
       targetVerses,
     );
 
     await AppPreferences.saveUser(updatedUser);
+    
+    // Print the updated daily progress for debugging
+    final todayProgress = updatedUser.todayProgress;
+    if (todayProgress != null) {
+      print('DAILY PROGRESS: Updated to ${todayProgress.completedVerses}/${todayProgress.targetVerses} verses (${todayProgress.progress * 100}%)');
+    }
   }
 
   /// Get day name from weekday number
