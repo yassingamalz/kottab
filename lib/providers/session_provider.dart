@@ -452,27 +452,42 @@ class SessionProvider extends ChangeNotifier {
     if (_currentSession == null) return false;
 
     try {
+      // Store the current session data before clearing it
+      final sessionToSave = _currentSession!;
+      
       // Record the session in the memorization service
       final success = await _memorizationService.recordMemorizationSession(
-        surahId: _currentSession!.surahId,
-        startVerse: _currentSession!.startVerse,
-        endVerse: _currentSession!.endVerse,
-        quality: _currentSession!.quality,
-        notes: _currentSession!.notes,
+        surahId: sessionToSave.surahId,
+        startVerse: sessionToSave.startVerse,
+        endVerse: sessionToSave.endVerse,
+        quality: sessionToSave.quality,
+        notes: sessionToSave.notes,
       );
 
       if (success) {
         // Add to recent sessions
-        _recentSessions.insert(0, _currentSession!);
+        _recentSessions.insert(0, sessionToSave);
+
+        // Clear current session first to avoid state issues
+        _currentSession = null;
 
         // Update the statistics provider - force refresh all providers
         await _memorizationService.refreshStatistics();
         
-        // Clear current session
-        _currentSession = null;
-
-        // Get an updated list of due verse sets - this triggers changes
+        // Explicitly reload surahs with updated progress
+        _surahs = await _memorizationService.getSurahsWithProgress();
+        
+        // Get an updated list of due verse sets
         _dueSets = await _memorizationService.getDueVerseSets();
+
+        // Log for debugging
+        print("SessionProvider: Session saved successfully - reloaded Surahs and due sets");
+        if (_surahs.isNotEmpty) {
+          final fatiha = _surahs.firstWhere((s) => s.id == 1, orElse: () => null as Surah);
+          if (fatiha != null) {
+            print("Al-Fatiha progress: ${fatiha.memorizedPercentage * 100}%");
+          }
+        }
 
         // Force notify listeners to ensure all UI is updated
         notifyListeners();
@@ -483,50 +498,6 @@ class SessionProvider extends ChangeNotifier {
       print('Error saving session: $e');
       return false;
     }
-  }
-
-  /// Create sample sessions from memorized set IDs
-  List<MemorizationSession> _createSampleSessionsFromIds(List<String> memorizedSetIds) {
-    final sessions = <MemorizationSession>[];
-    final now = DateTime.now();
-    
-    for (final id in memorizedSetIds.take(3)) {
-      try {
-        final parts = id.split(':');
-        if (parts.length != 2) continue;
-        
-        final surahId = int.parse(parts[0]);
-        final verseParts = parts[1].split('-');
-        if (verseParts.length != 2) continue;
-        
-        final startVerse = int.parse(verseParts[0]);
-        final endVerse = int.parse(verseParts[1]);
-        
-        // Find surah name
-        String surahName = "سورة $surahId";
-        try {
-          final surah = _surahs.firstWhere((s) => s.id == surahId);
-          surahName = surah.arabicName;
-        } catch (e) {
-          // Use default name
-        }
-        
-        sessions.add(MemorizationSession(
-          surahId: surahId,
-          surahName: surahName,
-          startVerse: startVerse,
-          endVerse: endVerse,
-          timestamp: now.subtract(Duration(days: sessions.length)),
-          type: SessionType.newMemorization,
-          quality: 0.9,
-          notes: 'تم الحفظ بنجاح',
-        ));
-      } catch (e) {
-        print('Error parsing memorized set ID: $id');
-      }
-    }
-    
-    return sessions;
   }
 }
 

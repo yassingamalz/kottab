@@ -25,6 +25,8 @@ class MemorizationService {
     final memorizedSetIds = await AppPreferences.loadMemorizedSets();
     final surahs = QuranData.getAllSurahs();
 
+    print("MemorizationService: Loading Surahs with progress. Memorized sets: ${memorizedSetIds.length}");
+
     // Create surah copies with verse sets populated from stored progress
     return surahs.map((surah) {
       final defaultSets = QuranData.generateDefaultSets(surah.id);
@@ -88,7 +90,7 @@ class MemorizationService {
 
       // Get the verse set
       final setId = '$surahId:$startVerse-$endVerse';
-      print('Recording session for set: $setId');
+      print('Recording session for set: $setId with quality: $quality');
       
       // Get surahs (this ensures we have valid data to work with)
       final surahs = await getSurahsWithProgress();
@@ -247,7 +249,7 @@ class MemorizationService {
     return await AppPreferences.loadMemorizedSets();
   }
   
-  /// Force refresh statistics
+  /// Force refresh statistics to ensure progress is accurately reflected
   Future<void> refreshStatistics() async {
     // Re-compute statistics from memorized sets
     final memorizedSets = await AppPreferences.loadMemorizedSets();
@@ -265,6 +267,7 @@ class MemorizationService {
         totalVerses += (endVerse - startVerse + 1);
       } catch (e) {
         // Skip invalid IDs
+        print('Error processing set ID: $setId - $e');
       }
     }
     
@@ -274,6 +277,19 @@ class MemorizationService {
     );
     
     await AppPreferences.saveStatistics(updatedStats);
+    
+    // Debugging information
+    print('MemorizationService: Statistics refreshed');
+    print('Total memorized verses: $totalVerses');
+    print('Memorized sets count: ${memorizedSets.length}');
+    
+    // Also update user's total memorized verses
+    if (user != null) {
+      final updatedUser = user.copyWith(
+        totalMemorizedVerses: totalVerses,
+      );
+      await AppPreferences.saveUser(updatedUser);
+    }
   }
 
   /// Get due verse sets for today
@@ -347,7 +363,18 @@ class MemorizationService {
       daysActive: user.isActiveToday ? stats.daysActive : stats.daysActive + 1,
     );
 
+    // Save the updated statistics
     await AppPreferences.saveStatistics(updatedStats);
+    
+    // Also update user's total memorized verses
+    if (user != null) {
+      final updatedUser = user.copyWith(
+        totalMemorizedVerses: stats.totalMemorizedVerses + newMemorizedVerses,
+      );
+      await AppPreferences.saveUser(updatedUser);
+    }
+    
+    print('Statistics updated: Total memorized verses = ${updatedStats.totalMemorizedVerses}');
   }
 
   /// Update user progress for today

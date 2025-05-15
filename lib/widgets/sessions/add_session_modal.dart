@@ -46,30 +46,36 @@ class _AddSessionModalState extends State<AddSessionModal> {
         final quranProvider = Provider.of<QuranProvider>(context, listen: false);
         final scheduleProvider = Provider.of<ScheduleProvider.ScheduleProvider>(context, listen: false);
         
-        // Refresh all data
-        statsProvider.refreshData();
-        settingsProvider.refreshData();
-        quranProvider.refreshData();
-        scheduleProvider.refreshData();
+        // Wait for all refreshes to complete together
+        await Future.wait([
+          statsProvider.refreshData(),
+          settingsProvider.refreshData(),
+          quranProvider.refreshData(),
+          scheduleProvider.refreshData(),
+        ]);
         
         // Close the modal
-        Navigator.of(context).pop();
-        
-        // Show success message
-        showCustomSnackBar(
-          context: context,
-          message: 'تم تسجيل الجلسة بنجاح!',
-          type: SnackBarType.success,
-        );
-        
-        // Force a rebuild of the providers after a short delay
-        Future.delayed(const Duration(milliseconds: 300), () {
-          if (mounted) {
-            // This extra notifyListeners call helps ensure UI updates
-            provider.notifyListeners();
-            statsProvider.notifyListeners();
-          }
-        });
+        if (mounted) {
+          Navigator.of(context).pop();
+          
+          // Show success message
+          showCustomSnackBar(
+            context: context,
+            message: 'تم تسجيل الجلسة بنجاح!',
+            type: SnackBarType.success,
+          );
+          
+          // Force additional UI updates after a short delay
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted) {
+              // This extra notifyListeners call helps ensure UI updates
+              provider.notifyListeners();
+              statsProvider.notifyListeners();
+              quranProvider.notifyListeners();
+              scheduleProvider.notifyListeners();
+            }
+          });
+        }
       } else {
         showCustomSnackBar(
           context: context,
