@@ -255,7 +255,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
     );
   }
 
-  // Build a clear preview of tomorrow's tasks
+  // FIXED: Show all tomorrow's tasks, not just the first one
   Widget _buildTomorrowPreview(BuildContext context, schedule_provider.DaySchedule tomorrowSchedule) {
     if (tomorrowSchedule.sessions.isEmpty) {
       return const SizedBox.shrink();
@@ -288,68 +288,71 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
         
         const SizedBox(height: 12),
         
-        // Show the first session as preview with more details
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.primaryLight),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 5,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              // Session type icon with background
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _getSessionTypeColor(tomorrowSchedule.sessions[0].type).withOpacity(0.1),
-                  shape: BoxShape.circle,
+        // Show ALL sessions for tomorrow, not just the first one
+        ...tomorrowSchedule.sessions.map((session) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _getSessionTypeColor(session.type).withOpacity(0.3)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 5,
+                  offset: const Offset(0, 2),
                 ),
-                child: Icon(
-                  _getSessionTypeIcon(tomorrowSchedule.sessions[0].type),
-                  color: _getSessionTypeColor(tomorrowSchedule.sessions[0].type),
-                  size: 20,
+              ],
+            ),
+            child: Row(
+              children: [
+                // Session type icon with background
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _getSessionTypeColor(session.type).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _getSessionTypeIcon(session.type),
+                    color: _getSessionTypeColor(session.type),
+                    size: 20,
+                  ),
                 ),
-              ),
-              
-              const SizedBox(width: 12),
-              
-              // Session details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _getSessionTypeText(tomorrowSchedule.sessions[0].type),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: _getSessionTypeColor(tomorrowSchedule.sessions[0].type),
-                        fontWeight: FontWeight.w500,
+                
+                const SizedBox(width: 12),
+                
+                // Session details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _getSessionTypeText(session.type),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: _getSessionTypeColor(session.type),
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                    Text(
-                      '${tomorrowSchedule.sessions[0].surahName} ${tomorrowSchedule.sessions[0].verseRange}',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    // Add verse count
-                    Text(
-                      'عدد الآيات: ${tomorrowSchedule.sessions[0].endVerse - tomorrowSchedule.sessions[0].startVerse + 1}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
+                      Text(
+                        '${session.surahName} ${session.verseRange}',
+                        style: Theme.of(context).textTheme.titleSmall,
                       ),
-                    ),
-                  ],
+                      // Add verse count
+                      Text(
+                        'عدد الآيات: ${session.endVerse - session.startVerse + 1}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
+              ],
+            ),
+          );
+        }).toList(),
       ],
     );
   }
