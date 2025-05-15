@@ -110,6 +110,9 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
         final now = DateTime.now();
         final String formattedDate = DateFormatter.formatArabicDate(now);
         final int streak = settingsProvider.user?.streak ?? widget.streak;
+        
+        // Get the actual memorization percentage from the statistics provider
+        final double memorizedPercentage = statsProvider.memorizedPercentage;
 
         return Container(
           width: double.infinity,
@@ -127,12 +130,16 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                     children: [
                       Text(
                         'مرحبًا بك',
-                        style: Theme.of(context).textTheme.titleLarge,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(
                         formattedDate,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.textSecondary,
+                          fontSize: 14,
                         ),
                       ),
                     ],
@@ -151,6 +158,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                           style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w600,
+                            fontSize: 15,
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -159,6 +167,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                           style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w600,
+                            fontSize: 15,
                           ),
                         ),
                       ],
@@ -175,8 +184,8 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                     animation: _animationController,
                     builder: (context, child) {
                       return SizedBox(
-                        height: 200, // Fixed height to contain all circles
-                        width: 200, // Fixed width to contain all circles
+                        height: 220, // Increased height to contain all circles
+                        width: 220, // Increased width to contain all circles
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
@@ -184,24 +193,24 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                             CircleProgress(
                               progress: _oldReviewAnimation.value,
                               color: AppColors.tertiary,
-                              size: 180,
-                              strokeWidth: 8,
+                              size: 200,
+                              strokeWidth: 10,
                             ),
                             
                             // Middle ring - Recent review
                             CircleProgress(
                               progress: _recentReviewAnimation.value,
                               color: AppColors.secondary,
-                              size: 150,
-                              strokeWidth: 8,
+                              size: 165,
+                              strokeWidth: 10,
                             ),
                             
                             // Inner ring - New memorization
                             CircleProgress(
                               progress: _newMemAnimation.value,
                               color: AppColors.primary,
-                              size: 120,
-                              strokeWidth: 8,
+                              size: 130,
+                              strokeWidth: 10,
                             ),
                             
                             // Center text - use real stats
@@ -209,16 +218,19 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  ArabicNumbers.formatPercentage(statsProvider.memorizedPercentage > 0 ? 
-                                      statsProvider.memorizedPercentage : _getOverallProgress()),
+                                  ArabicNumbers.formatPercentage(memorizedPercentage > 0 ? 
+                                      memorizedPercentage : _getOverallProgress()),
                                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 32,
                                   ),
                                 ),
                                 Text(
                                   'الإنجاز',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: AppColors.textSecondary,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ],
@@ -237,8 +249,8 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                 children: [
                   // New memorization
                   Container(
-                    width: 95, // Fixed width for each stat column
-                    height: 80, // Fixed height
+                    width: 105, // Increased width for each stat column
+                    height: 85, // Increased height
                     child: _buildActivitySummary(
                       context,
                       icon: Icons.bolt, 
@@ -251,8 +263,8 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                   
                   // Recent review
                   Container(
-                    width: 95, // Fixed width for each stat column
-                    height: 80, // Fixed height
+                    width: 105, // Increased width for each stat column
+                    height: 85, // Increased height
                     child: _buildActivitySummary(
                       context,
                       icon: Icons.refresh, 
@@ -265,8 +277,8 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                   
                   // Old review
                   Container(
-                    width: 95, // Fixed width for each stat column
-                    height: 80, // Fixed height
+                    width: 105, // Increased width for each stat column
+                    height: 85, // Increased height
                     child: _buildActivitySummary(
                       context,
                       icon: Icons.replay, 
@@ -297,8 +309,8 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
       mainAxisSize: MainAxisSize.min, // Ensure the column uses minimum required space
       children: [
         Container(
-          width: 40,
-          height: 40,
+          width: 45, // Increased icon container size
+          height: 45, // Increased icon container size
           decoration: BoxDecoration(
             color: bgColor,
             shape: BoxShape.circle,
@@ -306,26 +318,30 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
           child: Icon(
             icon,
             color: color,
-            size: 20,
+            size: 22, // Increased icon size
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         // Use a SizedBox with fixed width to prevent overflow
         SizedBox(
-          width: 80,
+          width: 85,
           child: Text(
             value,
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 15, // Increased font size
+            ),
             textAlign: TextAlign.center,
           ),
         ),
         // Use a SizedBox with fixed width to prevent overflow
         SizedBox(
-          width: 80,
+          width: 85,
           child: Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColors.textSecondary,
+              fontSize: 13, // Increased font size
             ),
             textAlign: TextAlign.center,
           ),
