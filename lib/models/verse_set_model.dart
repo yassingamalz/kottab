@@ -156,13 +156,23 @@ class VerseSet {
     final now = DateTime.now();
     final nextDate = DateTime(now.year, now.month, now.day + newInterval);
     
-    // Determine new status
+    // FIXED: Modified the status determination for better progress tracking
+    // Consider the set memorized if:
+    // 1. Quality is excellent (>= 0.8) and we've reviewed it at least once, OR
+    // 2. We've reviewed it repeatedly (repetitionCount >= 2) with at least decent quality (>= 0.6)
     MemorizationStatus newStatus;
-    if (newRepetitionCount >= 3 && quality > 0.8) {
+    
+    if ((quality >= 0.8 && reviewHistory.length >= 1) || 
+        (newRepetitionCount >= 2 && quality >= 0.6)) {
+      // Mark as memorized with good quality and multiple reviews
+      print("Verse set ${id} marked as MEMORIZED: quality=${quality}, repCount=${newRepetitionCount}");
       newStatus = MemorizationStatus.memorized;
-    } else if (newRepetitionCount > 0 || quality > 0.0) {
+    } else if (reviewHistory.length > 0 || quality > 0.0) {
+      // Mark as in progress if any review has been attempted
+      print("Verse set ${id} marked as IN PROGRESS: quality=${quality}, reviews=${reviewHistory.length + 1}");
       newStatus = MemorizationStatus.inProgress;
     } else {
+      print("Verse set ${id} remains NOT STARTED: quality=${quality}");
       newStatus = MemorizationStatus.notStarted;
     }
 
