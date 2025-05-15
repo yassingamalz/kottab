@@ -150,14 +150,27 @@ class ScheduleProvider extends ChangeNotifier {
     });
   }
 
-  /// Generate the week schedule based on SM-2 algorithm
+  /// Check if Al-Fatiha is fully memorized in the provided surahs
+  bool _isAlFatihaMemorized(List<Surah> surahs) {
+    try {
+      final fatiha = surahs.firstWhere((s) => s.id == 1);
+      return fatiha.verseSets.every((set) => set.status == MemorizationStatus.memorized);
+    } catch (e) {
+      return false; // Could not find Al-Fatiha
+    }
+  }
+
+  /// Generate the week schedule based on SM-2 algorithm and surah progression
   Future<List<DaySchedule>> _generateWeekSchedule() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final weekSchedule = <DaySchedule>[];
 
-    // Get all Surahs for display names
+    // Get all Surahs for display names and progression checks
     final surahs = await _memorizationService.getSurahsWithProgress();
+    
+    // Check if Al-Fatiha is memorized before scheduling other surahs
+    bool alFatihaMemorized = _isAlFatihaMemorized(surahs);
     
     // Get the plan for today based on SM-2 algorithm
     final todayPlan = await _memorizationService.generateTodayPlan();
@@ -165,30 +178,84 @@ class ScheduleProvider extends ChangeNotifier {
     // Format sessions for today
     final todaySessions = <ScheduledSession>[];
 
-    // Add new memorization sessions
-    for (final verseSet in todayPlan['new'] ?? []) {
-      final surahName = surahs
-          .firstWhere((s) => s.id == verseSet.surahId,
-              orElse: () => const Surah(
-                  id: 0,
-                  name: "Unknown",
-                  arabicName: "غير معروف",
-                  verseCount: 0))
-          .arabicName;
+    // If Al-Fatiha is not memorized, only schedule it and ignore other new memorization
+    if (!alFatihaMemorized) {
+      // Find Al-Fatiha
+      try {
+        final fatiha = surahs.firstWhere((s) => s.id == 1);
+        final notMemorizedSets = fatiha.verseSets.where(
+          (set) => set.status != MemorizationStatus.memorized
+        ).toList();
+        
+        if (notMemorizedSets.isNotEmpty) {
+          final set = notMemorizedSets.first;
+          todaySessions.add(ScheduledSession(
+            surahId: 1,
+            surahName: "الفاتحة",
+            startVerse: set.startVerse,
+            endVerse: set.endVerse,
+            type: SessionType.newMemorization,
+            isCompleted: false,
+            dueDate: set.nextReviewDate,
+          ));
+        } else {
+          // Add full Al-Fatiha for memorization
+          todaySessions.add(ScheduledSession(
+            surahId: 1,
+            surahName: "الفاتحة",
+            startVerse: 1,
+            endVerse: 7,
+            type: SessionType.newMemorization,
+            isCompleted: false,
+            dueDate: today,
+          ));
+        }
+      } catch (e) {
+        // Al-Fatiha not found, add default
+        todaySessions.add(ScheduledSession(
+          surahId: 1,
+          surahName: "الفاتحة",
+          startVerse: 1,
+          endVerse: 7,
+          type: SessionType.newMemorization,
+          isCompleted: false,
+          dueDate: today,
+        ));
+      }
+    } else {
+      // Al-Fatiha is memorized, follow normal plan
+      
+      // Add new memorization sessions
+      for (final verseSet in todayPlan['new'] ?? []) {
+        final surahName = surahs
+            .firstWhere((s) => s.id == verseSet.surahId,
+                orElse: () => const Surah(
+                    id: 0,
+                    name: "Unknown",
+                    arabicName: "غير معروف",
+                    verseCount: 0))
+            .arabicName;
 
-      todaySessions.add(ScheduledSession(
-        surahId: verseSet.surahId,
-        surahName: surahName,
-        startVerse: verseSet.startVerse,
-        endVerse: verseSet.endVerse,
-        type: SessionType.newMemorization,
-        isCompleted: verseSet.status == MemorizationStatus.memorized,
-        dueDate: verseSet.nextReviewDate,
-      ));
+        todaySessions.add(ScheduledSession(
+          surahId: verseSet.surahId,
+          surahName: surahName,
+          startVerse: verseSet.startVerse,
+          endVerse: verseSet.endVerse,
+          type: SessionType.newMemorization,
+          isCompleted: verseSet.status == MemorizationStatus.memorized,
+          dueDate: verseSet.nextReviewDate,
+        ));
+      }
     }
 
-    // Add recent review sessions
+    // Add review sessions only for surahs that have been started
+    // Recent reviews
     for (final verseSet in todayPlan['recent'] ?? []) {
+      // Only schedule reviews for Al-Fatiha if it's not fully memorized
+      if (!alFatihaMemorized && verseSet.surahId > 1) {
+        continue;
+      }
+      
       final surahName = surahs
           .firstWhere((s) => s.id == verseSet.surahId,
               orElse: () => const Surah(
@@ -209,8 +276,13 @@ class ScheduleProvider extends ChangeNotifier {
       ));
     }
 
-    // Add old review sessions
+    // Old reviews
     for (final verseSet in todayPlan['old'] ?? []) {
+      // Only schedule reviews for Al-Fatiha if it's not fully memorized
+      if (!alFatihaMemorized && verseSet.surahId > 1) {
+        continue;
+      }
+      
       final surahName = surahs
           .firstWhere((s) => s.id == verseSet.surahId,
               orElse: () => const Surah(
@@ -246,6 +318,11 @@ class ScheduleProvider extends ChangeNotifier {
       final dueSessions = <ScheduledSession>[];
       
       for (final surah in surahs) {
+        // If Al-Fatiha is not memorized, only include Al-Fatiha
+        if (!alFatihaMemorized && surah.id > 1) {
+          continue;
+        }
+        
         for (final set in surah.verseSets) {
           if (set.nextReviewDate != null) {
             final nextReviewDate = set.nextReviewDate!;
