@@ -29,13 +29,14 @@ class ActivityTimeline extends StatelessWidget {
                 'النشاط الأخير',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
+                  fontSize: 18, // Increased font size
                 ),
               ),
               SeeAllButton(onPressed: onViewAll),
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 18), // Increased spacing
 
           // Activity items
           ...activities.map((activity) => _buildActivityItem(context, activity)).toList(),
@@ -65,7 +66,7 @@ class ActivityTimeline extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 18), // Increased spacing between items
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -73,8 +74,8 @@ class ActivityTimeline extends StatelessWidget {
           Column(
             children: [
               Container(
-                width: 32,
-                height: 32,
+                width: 36, // Increased size
+                height: 36, // Increased size
                 decoration: BoxDecoration(
                   color: iconBgColor,
                   shape: BoxShape.circle,
@@ -82,7 +83,7 @@ class ActivityTimeline extends StatelessWidget {
                 child: Icon(
                   activity.icon,
                   color: iconColor,
-                  size: 16,
+                  size: 18, // Increased size
                 ),
               ),
               Container(
@@ -93,12 +94,12 @@ class ActivityTimeline extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(width: 12),
+          const SizedBox(width: 14), // Increased spacing
 
           // Activity content
           Expanded(
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14), // Increased padding
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(12),
@@ -112,24 +113,29 @@ class ActivityTimeline extends StatelessWidget {
                     children: [
                       Text(
                         _getActivityTypeText(activity.type) + ' ' + activity.surah + ' ' + activity.verseRange,
-                        style: Theme.of(context).textTheme.titleSmall,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14, // Increased font size
+                        ),
                       ),
                       Text(
                         activity.timeAgo,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.textSecondary,
+                          fontSize: 12, // Increased font size
                         ),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6), // Increased spacing
 
                   // Description
                   Text(
                     activity.description,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.textSecondary,
+                      fontSize: 13, // Increased font size
                     ),
                   ),
                 ],
