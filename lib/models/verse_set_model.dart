@@ -133,8 +133,18 @@ class VerseSet {
     // Convert quality from 0.0-1.0 to 0-5 scale for SM-2
     final sm2Quality = (quality * 5).round();
     
-    // Update repetition count based on recall success
-    int newRepetitionCount = sm2Quality >= 3 ? repetitionCount + 1 : 0;
+    // FIX: Keep repetition count at 0 for new memorization
+    int newRepetitionCount;
+    if (status == MemorizationStatus.notStarted) {
+      // For new memorization, keep at 0
+      newRepetitionCount = 0;
+    } else if (sm2Quality >= 3) {
+      // Only increment for successful reviews of already started sets
+      newRepetitionCount = repetitionCount + 1;
+    } else {
+      // Reset on failed review
+      newRepetitionCount = 0;
+    }
     
     // Calculate new easiness factor
     double newEF = calculateNextEasinessFactor(quality);
@@ -163,14 +173,12 @@ class VerseSet {
     // 3. We've reviewed it repeatedly (repetitionCount >= 2) with at least decent quality (>= 0.5)
     MemorizationStatus newStatus;
     
-    if (quality >= 0.9 || 
-        (quality >= 0.7 && reviewHistory.length >= 1) || 
-        (newRepetitionCount >= 2 && quality >= 0.5)) {
-      // Mark as memorized with good quality
+    if (quality >= 0.95) {
+      // Mark as fully memorized with excellent quality
       print("Verse set ${id} marked as MEMORIZED: quality=${quality}, repCount=${newRepetitionCount}");
       newStatus = MemorizationStatus.memorized;
-    } else if (reviewHistory.length > 0 || quality > 0.0) {
-      // Mark as in progress if any review has been attempted
+    } else if (quality >= 0.7 || reviewHistory.isNotEmpty) {
+      // Mark as in progress with good quality or any review history
       print("Verse set ${id} marked as IN PROGRESS: quality=${quality}, reviews=${reviewHistory.length + 1}");
       newStatus = MemorizationStatus.inProgress;
     } else {
