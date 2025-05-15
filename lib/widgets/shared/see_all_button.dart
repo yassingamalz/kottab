@@ -27,7 +27,7 @@ class SeeAllButton extends StatelessWidget {
           Text(
             'مشاهدة الكل',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 14, // Increased font size
               fontWeight: FontWeight.w500,
               color: color ?? AppColors.primary,
             ),
@@ -35,7 +35,7 @@ class SeeAllButton extends StatelessWidget {
           const SizedBox(width: 4),
           Icon(
             Icons.chevron_right, // Changed from chevron_left to chevron_right for correct RTL display
-            size: 16,
+            size: 18, // Increased icon size
             color: color ?? AppColors.primary,
           ),
         ],
