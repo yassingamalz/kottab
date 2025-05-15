@@ -50,8 +50,8 @@ class StatCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: 32,
-                    height: 32,
+                    width: 36, // Slightly larger icon container
+                    height: 36, // Slightly larger icon container
                     decoration: BoxDecoration(
                       color: bgColor,
                       borderRadius: BorderRadius.circular(8),
@@ -59,7 +59,7 @@ class StatCard extends StatelessWidget {
                     child: Icon(
                       icon,
                       color: iconColor,
-                      size: 16,
+                      size: 18, // Slightly larger icon
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -67,8 +67,10 @@ class StatCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       title,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14, // Increased font size
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -76,7 +78,7 @@ class StatCard extends StatelessWidget {
                 ],
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 16), // Increased spacing
 
               // Value with suffix - explicitly managed for RTL
               Row(
@@ -85,19 +87,21 @@ class StatCard extends StatelessWidget {
                     value,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
+                      fontSize: 26, // Increased font size
                     ),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     suffix,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppColors.textSecondary,
+                      fontSize: 15, // Increased font size
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 4),
+              const SizedBox(height: 6), // Adjusted spacing
 
               // Description - constrained to prevent overflow
               SizedBox(
@@ -106,6 +110,7 @@ class StatCard extends StatelessWidget {
                   description,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppColors.textSecondary,
+                    fontSize: 13, // Increased font size
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -118,8 +123,8 @@ class StatCard extends StatelessWidget {
             top: 0,
             left: 0, // Changed from right to left for RTL layout
             child: SizedBox(
-              width: 24,
-              height: 24,
+              width: 28, // Slightly larger progress indicator
+              height: 28, // Slightly larger progress indicator
               child: CircularProgressIndicator(
                 value: progress,
                 backgroundColor: Colors.grey.shade100,
