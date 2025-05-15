@@ -6,6 +6,7 @@ import 'package:kottab/data/quran_data.dart';
 import 'package:kottab/services/memorization_service.dart';
 
 import '../models/surah_model.dart';
+import '../models/verse_set_model.dart';
 
 /// Type of memorization session
 enum SessionType {
@@ -22,6 +23,7 @@ class ScheduledSession {
   final int endVerse;
   final SessionType type;
   final bool isCompleted;
+  final DateTime? dueDate;
 
   const ScheduledSession({
     required this.surahId,
@@ -30,6 +32,7 @@ class ScheduledSession {
     required this.endVerse,
     required this.type,
     this.isCompleted = false,
+    this.dueDate,
   });
 
   /// Get the verse range as a formatted string
@@ -71,7 +74,7 @@ class ScheduleProvider extends ChangeNotifier {
       final user = await _memorizationService.getUser();
       _settings = Map<String, dynamic>.from(user.settings);
 
-      // Generate this week's schedule
+      // Generate this week's schedule based on SM-2 algorithm
       _weekSchedule = await _generateWeekSchedule();
     } catch (e) {
       print('Error loading schedule: $e');
@@ -147,16 +150,16 @@ class ScheduleProvider extends ChangeNotifier {
     });
   }
 
-  /// Generate the week schedule based on memorization plan and current settings
+  /// Generate the week schedule based on SM-2 algorithm
   Future<List<DaySchedule>> _generateWeekSchedule() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final weekSchedule = <DaySchedule>[];
 
     // Get all Surahs for display names
-    final surahs = QuranData.getAllSurahs();
-
-    // Generate today's plan
+    final surahs = await _memorizationService.getSurahsWithProgress();
+    
+    // Get the plan for today based on SM-2 algorithm
     final todayPlan = await _memorizationService.generateTodayPlan();
 
     // Format sessions for today
@@ -179,10 +182,12 @@ class ScheduleProvider extends ChangeNotifier {
         startVerse: verseSet.startVerse,
         endVerse: verseSet.endVerse,
         type: SessionType.newMemorization,
+        isCompleted: verseSet.status == MemorizationStatus.memorized,
+        dueDate: verseSet.nextReviewDate,
       ));
     }
 
-    // Add recent review sessions - use current reviewSetSize setting
+    // Add recent review sessions
     for (final verseSet in todayPlan['recent'] ?? []) {
       final surahName = surahs
           .firstWhere((s) => s.id == verseSet.surahId,
@@ -199,10 +204,12 @@ class ScheduleProvider extends ChangeNotifier {
         startVerse: verseSet.startVerse,
         endVerse: verseSet.endVerse,
         type: SessionType.recentReview,
+        isCompleted: false,
+        dueDate: verseSet.nextReviewDate,
       ));
     }
 
-    // Add old review sessions - use current oldReviewCycle setting
+    // Add old review sessions
     for (final verseSet in todayPlan['old'] ?? []) {
       final surahName = surahs
           .firstWhere((s) => s.id == verseSet.surahId,
@@ -219,6 +226,8 @@ class ScheduleProvider extends ChangeNotifier {
         startVerse: verseSet.startVerse,
         endVerse: verseSet.endVerse,
         type: SessionType.oldReview,
+        isCompleted: false,
+        dueDate: verseSet.nextReviewDate,
       ));
     }
 
@@ -229,61 +238,65 @@ class ScheduleProvider extends ChangeNotifier {
       sessions: todaySessions,
     ));
 
-    // Generate the rest of the week with placeholder sessions based on current settings
+    // Generate schedules for the rest of the week based on nextReviewDate
     for (int i = 1; i < 7; i++) {
       final date = today.add(Duration(days: i));
-      final sessions = _generatePlaceholderSessions(surahs);
+      
+      // Find all sets due on this date
+      final dueSessions = <ScheduledSession>[];
+      
+      for (final surah in surahs) {
+        for (final set in surah.verseSets) {
+          if (set.nextReviewDate != null) {
+            final nextReviewDate = set.nextReviewDate!;
+            final reviewDay = DateTime(
+              nextReviewDate.year, 
+              nextReviewDate.month, 
+              nextReviewDate.day
+            );
+            
+            if (reviewDay.isAtSameMomentAs(date)) {
+              // Determine the session type based on repetition count
+              SessionType sessionType;
+              if (set.status == MemorizationStatus.notStarted) {
+                sessionType = SessionType.newMemorization;
+              } else if (set.repetitionCount <= 2) {
+                sessionType = SessionType.recentReview;
+              } else {
+                sessionType = SessionType.oldReview;
+              }
+              
+              // Find the surah name
+              final surahName = surahs
+                  .firstWhere((s) => s.id == set.surahId,
+                      orElse: () => const Surah(
+                          id: 0,
+                          name: "Unknown",
+                          arabicName: "غير معروف",
+                          verseCount: 0))
+                  .arabicName;
+              
+              dueSessions.add(ScheduledSession(
+                surahId: set.surahId,
+                surahName: surahName,
+                startVerse: set.startVerse,
+                endVerse: set.endVerse,
+                type: sessionType,
+                isCompleted: false,
+                dueDate: set.nextReviewDate,
+              ));
+            }
+          }
+        }
+      }
 
       weekSchedule.add(DaySchedule(
         date: date,
         isToday: false,
-        sessions: sessions,
+        sessions: dueSessions,
       ));
     }
 
     return weekSchedule;
-  }
-
-  /// Generate placeholder sessions for future days using current settings
-  List<ScheduledSession> _generatePlaceholderSessions(List<Surah> surahs) {
-    final List<ScheduledSession> sessions = [];
-    final int dailyTarget = dailyVerseTarget;
-    final int reviewSize = reviewSetSize;
-    final int reviewCycle = oldReviewCycle;
-
-    // New memorization with dynamic verse count based on settings
-    final surah = surahs.firstWhere((s) => s.id == 2, orElse: () => surahs.first);
-    sessions.add(ScheduledSession(
-      surahId: surah.id,
-      surahName: surah.arabicName,
-      startVerse: 11,
-      endVerse: 11 + dailyTarget - 1,
-      type: SessionType.newMemorization,
-    ));
-
-    // Add a recent review with dynamic size based on settings
-    if (sessions.length % 2 == 0) {
-      final endVerse = Math.min(10 + reviewSize, surahs.firstWhere((s) => s.id == 2, orElse: () => surahs.first).verseCount);
-      sessions.add(ScheduledSession(
-        surahId: 2,
-        surahName: surahs.firstWhere((s) => s.id == 2, orElse: () => surahs.first).arabicName,
-        startVerse: 1,
-        endVerse: endVerse,
-        type: SessionType.recentReview,
-      ));
-    }
-
-    // Add an old review with cycle based on settings
-    if (sessions.length % reviewCycle == 0 || reviewCycle == 1) {
-      sessions.add(ScheduledSession(
-        surahId: 1,
-        surahName: surahs.firstWhere((s) => s.id == 1, orElse: () => surahs.first).arabicName,
-        startVerse: 1,
-        endVerse: 7,
-        type: SessionType.oldReview,
-      ));
-    }
-
-    return sessions;
   }
 }
