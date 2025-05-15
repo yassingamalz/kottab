@@ -33,6 +33,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Animation controller for tasks
   late AnimationController _progressController;
   bool _initialLoadDone = false;
+  // Track if Al-Fatiha has been memorized
+  bool _alFatihaMemorized = false;
 
   @override
   void initState() {
@@ -74,6 +76,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       scheduleProvider.refreshData(),
       quranProvider.refreshData(),
     ]);
+    
+    // Check if Al-Fatiha is memorized
+    final surahs = quranProvider.surahs;
+    try {
+      final fatiha = surahs.firstWhere((s) => s.id == 1);
+      _alFatihaMemorized = fatiha.verseSets.every((set) => set.status == MemorizationStatus.memorized);
+      print("HomeScreen: Al-Fatiha memorized status: $_alFatihaMemorized");
+    } catch (e) {
+      _alFatihaMemorized = false;
+    }
     
     // After refreshing, force rebuild UI
     if (mounted) {
@@ -337,6 +349,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   List<FocusTaskData> _buildFocusTasksFromDueSets(List<VerseSet> dueSets, ScheduleProvider.ScheduleProvider provider) {
     final surahs = Provider.of<QuranProvider>(context, listen: false).surahs;
     
+    // If Al-Fatiha is memorized and we don't have due sets, 
+    // return completed Al-Fatiha task instead of showing Al-Baqarah immediately
+    if (_alFatihaMemorized && dueSets.isEmpty) {
+      // Show completed Al-Fatiha to trigger the congratulatory message
+      try {
+        final fatiha = surahs.firstWhere((s) => s.id == 1);
+        return [
+          FocusTaskData(
+            title: "${fatiha.arabicName} ١-${fatiha.verseCount}",
+            type: TaskType.newMemorization,
+            completedVerses: fatiha.verseCount, // All verses completed
+            totalVerses: fatiha.verseCount,
+            progress: 1.0, // 100% progress
+            isCompleted: true, // Explicitly mark as completed
+          ),
+        ];
+      } catch (e) {
+        // Fallback if Al-Fatiha not found
+      }
+    }
+    
     if (dueSets.isEmpty) {
       // If no due sets, determine next Surah for memorization
       final nextSurahId = _determineNextSurahForMemorization(surahs);
@@ -491,33 +524,68 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return (streak / maxStreak).clamp(0.0, 1.0);
   }
   
-  // Get completed verses count for a task type
+  // Get completed verses count for a task type - FIXED
   int _getCompletedVerses(List<FocusTaskData> tasks, TaskType type) {
+    // First, check if Al-Fatiha is completed for newMemorization type
+    if (type == TaskType.newMemorization && _alFatihaMemorized) {
+      // Get Al-Fatiha from surahs
+      try {
+        final surahs = Provider.of<QuranProvider>(context, listen: false).surahs;
+        final fatiha = surahs.firstWhere((s) => s.id == 1);
+        return fatiha.verseCount; // Return the total verse count (7 for Al-Fatiha)
+      } catch (e) {
+        return 7; // Default Al-Fatiha verse count
+      }
+    }
+    
+    // Check if there's a task of this type
     final task = tasks.firstWhere(
       (t) => t.type == type, 
       orElse: () => FocusTaskData(
         title: '', 
         type: type, 
         completedVerses: 0, 
-        totalVerses: 1, 
+        totalVerses: type == TaskType.newMemorization ? 7 : 0, // Use 0 for review tasks with no assignment
         progress: 0.0
       )
     );
+    
     return task.completedVerses;
   }
   
-  // Get target verses count for a task type
+  // Get target verses count for a task type - FIXED
   int _getTargetVerses(List<FocusTaskData> tasks, TaskType type) {
+    // First, check if Al-Fatiha is completed for newMemorization type
+    if (type == TaskType.newMemorization && _alFatihaMemorized) {
+      // Get Al-Fatiha from surahs
+      try {
+        final surahs = Provider.of<QuranProvider>(context, listen: false).surahs;
+        final fatiha = surahs.firstWhere((s) => s.id == 1);
+        return fatiha.verseCount; // Return the total verse count (7 for Al-Fatiha)
+      } catch (e) {
+        return 7; // Default Al-Fatiha verse count
+      }
+    }
+    
+    // Check if a task of this type exists
+    final hasTaskOfType = tasks.any((t) => t.type == type);
+    
+    // If no task exists for reviews, return 0 instead of default values
+    if (!hasTaskOfType && (type == TaskType.recentReview || type == TaskType.oldReview)) {
+      return 0;
+    }
+    
     final task = tasks.firstWhere(
       (t) => t.type == type, 
       orElse: () => FocusTaskData(
         title: '', 
         type: type, 
         completedVerses: 0, 
-        totalVerses: type == TaskType.newMemorization ? 7 : 10, 
+        totalVerses: type == TaskType.newMemorization ? 7 : 0, // Use 0 for review tasks with no assignment
         progress: 0.0
       )
     );
+    
     return task.totalVerses;
   }
   

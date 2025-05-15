@@ -100,6 +100,11 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
         // Check if all tasks are completed
         final bool allTasksCompleted = widget.tasks.every((task) => 
           task.isCompleted || task.completedVerses >= task.totalVerses);
+        
+        print("TodayFocus: allTasksCompleted = $allTasksCompleted");
+        for (var task in widget.tasks) {
+          print("Task ${task.title}: isCompleted=${task.isCompleted}, completedVerses=${task.completedVerses}, totalVerses=${task.totalVerses}");
+        }
 
         return Container(
           width: double.infinity,
@@ -148,7 +153,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
 
               const SizedBox(height: 16),
 
-              // FIX: Show clear congratulatory message when all tasks are completed
+              // Show clear congratulatory message when all tasks are completed
               if (allTasksCompleted)
                 Container(
                   padding: const EdgeInsets.all(16),
