@@ -6,7 +6,6 @@ import 'package:kottab/widgets/shared/circle_progress.dart';
 import 'package:provider/provider.dart';
 import 'package:kottab/providers/statistics_provider.dart';
 import 'package:kottab/providers/settings_provider.dart';
-import 'package:kottab/providers/schedule_provider.dart' as schedule_provider;
 
 class HeroSection extends StatefulWidget {
   final double newMemProgress;
@@ -57,15 +56,20 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
   }
 
   void _initializeAnimations() {
+    // Use consumer data or widget values, prioritizing consumer data
+    final statsProvider = Provider.of<StatisticsProvider>(context, listen: false);
+    final realProgress = statsProvider.memorizedPercentage;
+    
+    // Use actual values with fallback to widget values
     _newMemAnimation = Tween<double>(
       begin: 0.0,
-      end: widget.newMemProgress,
+      end: realProgress > 0 ? realProgress : widget.newMemProgress,
     ).animate(CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeOutCubic,
     ));
 
-    _recentReviewAnimation = Tween<double>(
+    _recentReviewAnimation = Tween<double>( 
       begin: 0.0,
       end: widget.recentReviewProgress,
     ).animate(CurvedAnimation(
@@ -91,6 +95,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
       _initializeAnimations();
       _animationController.forward(from: 0.0);
     }
+    
   }
 
   @override
@@ -106,14 +111,11 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    return Consumer3<StatisticsProvider, SettingsProvider, schedule_provider.ScheduleProvider>(
-      builder: (context, statsProvider, settingsProvider, scheduleProvider, child) {
+    return Consumer2<StatisticsProvider, SettingsProvider>(
+      builder: (context, statsProvider, settingsProvider, child) {
         final now = DateTime.now();
         final String formattedDate = DateFormatter.formatArabicDate(now);
         final int streak = settingsProvider.user?.streak ?? widget.streak;
-        
-        // Get the actual memorization percentage from the statistics provider
-        final double memorizedPercentage = statsProvider.memorizedPercentage;
 
         return Container(
           width: double.infinity,
@@ -131,16 +133,12 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                     children: [
                       Text(
                         'مرحبًا بك',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
                       Text(
                         formattedDate,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.textSecondary,
-                          fontSize: 14,
                         ),
                       ),
                     ],
@@ -159,7 +157,6 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                           style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w600,
-                            fontSize: 15,
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -168,7 +165,6 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                           style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w600,
-                            fontSize: 15,
                           ),
                         ),
                       ],
@@ -185,8 +181,8 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                     animation: _animationController,
                     builder: (context, child) {
                       return SizedBox(
-                        height: 200, // Slightly reduced height to fix overflow
-                        width: 200, // Consistent width
+                        height: 200, // Fixed height to contain all circles
+                        width: 200, // Fixed width to contain all circles
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
@@ -195,23 +191,23 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                               progress: _oldReviewAnimation.value,
                               color: AppColors.tertiary,
                               size: 180,
-                              strokeWidth: 10,
+                              strokeWidth: 8,
                             ),
                             
                             // Middle ring - Recent review
                             CircleProgress(
                               progress: _recentReviewAnimation.value,
                               color: AppColors.secondary,
-                              size: 145,
-                              strokeWidth: 10,
+                              size: 150,
+                              strokeWidth: 8,
                             ),
                             
                             // Inner ring - New memorization
                             CircleProgress(
                               progress: _newMemAnimation.value,
                               color: AppColors.primary,
-                              size: 110,
-                              strokeWidth: 10,
+                              size: 120,
+                              strokeWidth: 8,
                             ),
                             
                             // Center text - use real stats
@@ -219,18 +215,16 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  ArabicNumbers.formatPercentage(memorizedPercentage),
+                                  ArabicNumbers.formatPercentage(statsProvider.memorizedPercentage > 0 
+                                    ? statsProvider.memorizedPercentage : _getOverallProgress()),
                                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 28,
                                   ),
                                 ),
                                 Text(
                                   'الإنجاز',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: AppColors.textSecondary,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ],
@@ -248,33 +242,45 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   // New memorization
-                  _buildActivitySummary(
-                    context,
-                    icon: Icons.bolt, 
-                    color: AppColors.primary,
-                    bgColor: AppColors.primaryLight,
-                    value: '${ArabicNumbers.toArabicDigits(widget.completedNewVerses)}/${ArabicNumbers.toArabicDigits(widget.targetNewVerses)}',
-                    label: 'حفظ جديد',
+                  Container(
+                    width: 95, // Fixed width for each stat column
+                    height: 80, // Fixed height
+                    child: _buildActivitySummary(
+                      context,
+                      icon: Icons.bolt, 
+                      color: AppColors.primary,
+                      bgColor: AppColors.primaryLight,
+                      value: '${ArabicNumbers.toArabicDigits(widget.completedNewVerses)}/${ArabicNumbers.toArabicDigits(widget.targetNewVerses)}',
+                      label: 'حفظ جديد',
+                    ),
                   ),
                   
                   // Recent review
-                  _buildActivitySummary(
-                    context,
-                    icon: Icons.refresh, 
-                    color: AppColors.secondary,
-                    bgColor: AppColors.secondaryLight,
-                    value: '${ArabicNumbers.toArabicDigits(widget.completedRecentVerses)}/${ArabicNumbers.toArabicDigits(widget.targetRecentVerses)}',
-                    label: 'مراجعة حديثة',
+                  Container(
+                    width: 95, // Fixed width for each stat column
+                    height: 80, // Fixed height
+                    child: _buildActivitySummary(
+                      context,
+                      icon: Icons.refresh, 
+                      color: AppColors.secondary,
+                      bgColor: AppColors.secondaryLight,
+                      value: '${ArabicNumbers.toArabicDigits(widget.completedRecentVerses)}/${ArabicNumbers.toArabicDigits(widget.targetRecentVerses)}',
+                      label: 'مراجعة حديثة',
+                    ),
                   ),
                   
                   // Old review
-                  _buildActivitySummary(
-                    context,
-                    icon: Icons.replay, 
-                    color: AppColors.tertiary,
-                    bgColor: AppColors.tertiaryLight,
-                    value: '${ArabicNumbers.toArabicDigits(widget.completedOldVerses)}/${ArabicNumbers.toArabicDigits(widget.targetOldVerses)}',
-                    label: 'مراجعة سابقة',
+                  Container(
+                    width: 95, // Fixed width for each stat column
+                    height: 80, // Fixed height
+                    child: _buildActivitySummary(
+                      context,
+                      icon: Icons.replay, 
+                      color: AppColors.tertiary,
+                      bgColor: AppColors.tertiaryLight,
+                      value: '${ArabicNumbers.toArabicDigits(widget.completedOldVerses)}/${ArabicNumbers.toArabicDigits(widget.targetOldVerses)}',
+                      label: 'مراجعة سابقة',
+                    ),
                   ),
                 ],
               ),
@@ -294,7 +300,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
     required String label,
   }) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: MainAxisSize.min, // Ensure the column uses minimum required space
       children: [
         Container(
           width: 40,
@@ -310,21 +316,25 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
+        // Use a SizedBox with fixed width to prevent overflow
+        SizedBox(
+          width: 80,
+          child: Text(
+            value,
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
           ),
-          textAlign: TextAlign.center,
         ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppColors.textSecondary,
-            fontSize: 12,
+        // Use a SizedBox with fixed width to prevent overflow
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
           ),
-          textAlign: TextAlign.center,
         ),
       ],
     );

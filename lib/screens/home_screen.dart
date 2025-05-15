@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
-import 'package:kottab/providers/schedule_provider.dart' as schedule_provider;
+import 'package:kottab/providers/schedule_provider.dart';
 import 'package:kottab/screens/activity_detail_screen.dart';
 import 'package:kottab/screens/achievements_screen.dart';
 import 'package:kottab/screens/weekly_detail_screen.dart';
@@ -14,8 +14,7 @@ import 'package:kottab/widgets/sessions/add_session_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:kottab/providers/statistics_provider.dart';
 import 'package:kottab/providers/settings_provider.dart';
-import 'package:kottab/providers/session_provider.dart' as session_provider;
-import 'package:kottab/models/user_model.dart';
+import 'package:kottab/providers/session_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,11 +24,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  // For animation demo
-  double _newMemProgress = 0.0;
-  double _recentReviewProgress = 0.0;
-  double _oldReviewProgress = 0.0;
-  
   // Animation controller for tasks
   late AnimationController _progressController;
 
@@ -38,20 +32,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.initState();
     _progressController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1200),
     );
-    
-    // Animate progress after widget is built
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        setState(() {
-          _newMemProgress = 0.65;
-          _recentReviewProgress = 0.9;
-          _oldReviewProgress = 0.3;
-        });
-        _progressController.forward();
-      }
-    });
     
     // Force data refresh when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -62,8 +44,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void _refreshData() {
     final statsProvider = Provider.of<StatisticsProvider>(context, listen: false);
     final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
-    final sessionProvider = Provider.of<session_provider.SessionProvider>(context, listen: false);
-    final scheduleProvider = Provider.of<schedule_provider.ScheduleProvider>(context, listen: false);
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    final scheduleProvider = Provider.of<ScheduleProvider>(context, listen: false);
     
     // Refresh all providers
     statsProvider.refreshData();
@@ -82,13 +64,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Consumer3<StatisticsProvider, SettingsProvider, schedule_provider.ScheduleProvider>(
+      child: Consumer3<StatisticsProvider, SettingsProvider, ScheduleProvider>(
         builder: (context, statsProvider, settingsProvider, scheduleProvider, child) {
           // Build dynamic weekly data from user progress
           final weeklyData = _buildWeeklyDataFromUser(settingsProvider);
           
-          // Build dynamic focus tasks from schedule
+          // Build dynamic focus tasks from schedule and get progress values
           final focusTasks = _buildFocusTasksFromSchedule(scheduleProvider);
+
+          // Calculate progress values from actual task progress
+          final newMemTask = focusTasks.firstWhere(
+            (t) => t.type == TaskType.newMemorization,
+            orElse: () => FocusTaskData(title: "", type: TaskType.newMemorization, completedVerses: 0, totalVerses: 1, progress: 0),
+          );
+          final recentReviewTask = focusTasks.firstWhere(
+            (t) => t.type == TaskType.recentReview,
+            orElse: () => FocusTaskData(title: "", type: TaskType.recentReview, completedVerses: 0, totalVerses: 1, progress: 0),
+          );
+          final oldReviewTask = focusTasks.firstWhere(
+            (t) => t.type == TaskType.oldReview,
+            orElse: () => FocusTaskData(title: "", type: TaskType.oldReview, completedVerses: 0, totalVerses: 1, progress: 0),
+          );
           
           // Build activities from recent sessions
           final activities = _buildActivitiesFromRecentSessions(context);
@@ -103,9 +99,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 children: [
                   // Hero section with Google Fit style circles
                   HeroSection(
-                    newMemProgress: _newMemProgress,
-                    recentReviewProgress: _recentReviewProgress,
-                    oldReviewProgress: _oldReviewProgress,
+                    newMemProgress: newMemTask.progress,
+                    recentReviewProgress: recentReviewTask.progress,
+                    oldReviewProgress: oldReviewTask.progress,
                     completedNewVerses: _getCompletedVerses(focusTasks, TaskType.newMemorization),
                     targetNewVerses: _getTargetVerses(focusTasks, TaskType.newMemorization),
                     completedRecentVerses: _getCompletedVerses(focusTasks, TaskType.recentReview),
@@ -301,7 +297,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   
   // Build focus tasks from schedule and user data
-  List<FocusTaskData> _buildFocusTasksFromSchedule(schedule_provider.ScheduleProvider provider) {
+  List<FocusTaskData> _buildFocusTasksFromSchedule(ScheduleProvider provider) {
     if (provider.isLoading || provider.weekSchedule.isEmpty) {
       // Return sample data if no schedule
       return [
@@ -309,15 +305,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           title: "البقرة ٦١-٧٠",
           type: TaskType.newMemorization,
           completedVerses: 0,
-          totalVerses: provider.dailyVerseTarget,
-          progress: _newMemProgress,
+          totalVerses: provider.dailyVerseTarget, 
+          progress: 0.65,
         ),
         FocusTaskData(
           title: "البقرة ٤١-٦٠",
           type: TaskType.recentReview,
           completedVerses: provider.reviewSetSize,
           totalVerses: provider.reviewSetSize,
-          progress: _recentReviewProgress,
+          progress: 0.9,
           isCompleted: true,
         ),
         FocusTaskData(
@@ -325,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           type: TaskType.oldReview,
           completedVerses: 0,
           totalVerses: 20,
-          progress: _oldReviewProgress,
+          progress: 0.3,
         ),
       ];
     }
@@ -338,20 +334,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // Process each session type
     for (final session in todaySchedule.sessions) {
       TaskType taskType;
-      double progress = 0.0;
-      
       switch (session.type) {
-        case schedule_provider.SessionType.newMemorization:
+        case SessionType.newMemorization:
           taskType = TaskType.newMemorization;
-          progress = _newMemProgress;
           break;
-        case schedule_provider.SessionType.recentReview:
+        case SessionType.recentReview:
           taskType = TaskType.recentReview;
-          progress = _recentReviewProgress;
           break;
-        case schedule_provider.SessionType.oldReview:
+        case SessionType.oldReview:
           taskType = TaskType.oldReview;
-          progress = _oldReviewProgress;
           break;
       }
       
@@ -360,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         type: taskType,
         completedVerses: session.isCompleted ? (session.endVerse - session.startVerse + 1) : 0,
         totalVerses: session.endVerse - session.startVerse + 1,
-        progress: session.isCompleted ? 1.0 : progress,
+        progress: session.isCompleted ? 1.0 : 0.0,
         isCompleted: session.isCompleted,
       ));
     }
@@ -372,7 +363,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         type: TaskType.newMemorization,
         completedVerses: 0,
         totalVerses: provider.dailyVerseTarget,
-        progress: _newMemProgress,
+        progress: 0.0,
       ));
     }
     
@@ -381,7 +372,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   
   // Build activities from recent sessions
   List<ActivityItem> _buildActivitiesFromRecentSessions(BuildContext context) {
-    final sessionProvider = Provider.of<session_provider.SessionProvider>(context, listen: false);
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
     final recentSessions = sessionProvider.recentSessions;
     
     if (recentSessions.isEmpty) {
@@ -421,12 +412,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       IconData icon;
       
       switch (session.type) {
-        case session_provider.SessionType.newMemorization:
+        case SessionType.newMemorization:
           activityType = ActivityType.memorization;
           icon = Icons.bolt;
           break;
-        case session_provider.SessionType.recentReview:
-        case session_provider.SessionType.oldReview:
+        case SessionType.recentReview:
+        case SessionType.oldReview:
           activityType = ActivityType.review;
           icon = Icons.refresh;
           break;
@@ -446,13 +437,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       
       String description;
       switch (session.type) {
-        case session_provider.SessionType.newMemorization:
+        case SessionType.newMemorization:
           description = "حفظت ${session.verseCount} آية بجودة ${(session.quality * 100).round()}٪";
           break;
-        case session_provider.SessionType.recentReview:
+        case SessionType.recentReview:
           description = "راجعت ${session.verseCount} آية حديثة بجودة ${(session.quality * 100).round()}٪";
           break;
-        case session_provider.SessionType.oldReview:
+        case SessionType.oldReview:
           description = "راجعت ${session.verseCount} آية سابقة بجودة ${(session.quality * 100).round()}٪";
           break;
       }
@@ -543,7 +534,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: ListView(
                 children: [
                   // Get details from schedule provider
-                  Consumer<schedule_provider.ScheduleProvider>(
+                  Consumer<ScheduleProvider>(
                     builder: (context, provider, child) {
                       // Show today's schedule information
                       if (provider.weekSchedule.isNotEmpty) {
@@ -590,11 +581,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                         Navigator.pop(context);
                                         
                                         // Start session
-                                        final sessionProvider = Provider.of<session_provider.SessionProvider>(context, listen: false);
+                                        final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
                                         WidgetsBinding.instance.addPostFrameCallback((_) {
                                           sessionProvider.startNewSession(
                                             surahId: session.surahId,
-                                            type: _convertSessionType(session.type),
+                                            type: session.type,
                                           );
                                           
                                           // Update verse range
@@ -648,36 +639,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
   
-  String _getSessionTypeText(schedule_provider.SessionType type) {
+  String _getSessionTypeText(SessionType type) {
     switch (type) {
-      case schedule_provider.SessionType.newMemorization:
+      case SessionType.newMemorization:
         return 'حفظ جديد';
-      case schedule_provider.SessionType.recentReview:
+      case SessionType.recentReview:
         return 'مراجعة حديثة';
-      case schedule_provider.SessionType.oldReview:
+      case SessionType.oldReview:
         return 'مراجعة سابقة';
     }
   }
   
-  String _getSessionButtonText(schedule_provider.SessionType type) {
+  String _getSessionButtonText(SessionType type) {
     switch (type) {
-      case schedule_provider.SessionType.newMemorization:
+      case SessionType.newMemorization:
         return 'بدء الحفظ';
-      case schedule_provider.SessionType.recentReview:
-      case schedule_provider.SessionType.oldReview:
+      case SessionType.recentReview:
+      case SessionType.oldReview:
         return 'بدء المراجعة';
-    }
-  }
-  
-  // Convert between session provider types
-  session_provider.SessionType _convertSessionType(schedule_provider.SessionType type) {
-    switch (type) {
-      case schedule_provider.SessionType.newMemorization:
-        return session_provider.SessionType.newMemorization;
-      case schedule_provider.SessionType.recentReview:
-        return session_provider.SessionType.recentReview;
-      case schedule_provider.SessionType.oldReview:
-        return session_provider.SessionType.oldReview;
     }
   }
 }
