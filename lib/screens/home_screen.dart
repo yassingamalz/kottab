@@ -77,37 +77,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           // Primary progress is the overall memorization percentage 
           final primaryProgress = statsProvider.memorizedPercentage;
           
-          // For the three rings, use a combination of real data and tasks
-          // If we have real memorization data, use it, otherwise use task data with defaults
+          // For the three rings, use ONLY real memorization data, don't use fake data
           double newProgress = 0.0;
           double recentProgress = 0.0;
           double oldProgress = 0.0;
           
-          // Use real memorization data if available, or calculated values
+          // Use real memorization data if available, otherwise all zeros
           if (primaryProgress > 0) {
             // Scale the three progress values proportionally to the actual memorization
             newProgress = primaryProgress * 0.8; // 80% of total memorized
             recentProgress = primaryProgress * 0.9; // 90% of total memorized
             oldProgress = primaryProgress * 0.6; // 60% of total memorized
-          } else {
-            // Use data from tasks with reasonable fallback values
-            final newMemTask = focusTasks.firstWhere(
-              (t) => t.type == TaskType.newMemorization,
-              orElse: () => FocusTaskData(title: "", type: TaskType.newMemorization, completedVerses: 0, totalVerses: 1, progress: 0.65),
-            );
-            final recentReviewTask = focusTasks.firstWhere(
-              (t) => t.type == TaskType.recentReview,
-              orElse: () => FocusTaskData(title: "", type: TaskType.recentReview, completedVerses: 0, totalVerses: 1, progress: 0.8),
-            );
-            final oldReviewTask = focusTasks.firstWhere(
-              (t) => t.type == TaskType.oldReview,
-              orElse: () => FocusTaskData(title: "", type: TaskType.oldReview, completedVerses: 0, totalVerses: 1, progress: 0.4),
-            );
-            
-            newProgress = newMemTask.progress > 0 ? newMemTask.progress : 0.65;
-            recentProgress = recentReviewTask.progress > 0 ? recentReviewTask.progress : 0.8;
-            oldProgress = oldReviewTask.progress > 0 ? oldReviewTask.progress : 0.4;
           }
+          // Removed the else block with default values - circles will show 0 when no real data
           
           // Build activities from recent sessions
           final activities = _buildActivitiesFromRecentSessions(context);
