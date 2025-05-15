@@ -97,7 +97,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
         // Get daily verse target from settings
         final int dailyTarget = scheduleProvider.dailyVerseTarget;
         
-        // FIX: Check if all tasks are completed based on individual task state
+        // Check if all tasks are completed
         final bool allTasksCompleted = widget.tasks.every((task) => 
           task.isCompleted || task.completedVerses >= task.totalVerses);
 
@@ -148,7 +148,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
 
               const SizedBox(height: 16),
 
-              // FIX: Improved completion message with next day's preview
+              // FIX: Show clear congratulatory message when all tasks are completed
               if (allTasksCompleted)
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -159,14 +159,16 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                   ),
                   child: Column(
                     children: [
+                      // Trophy icon for celebration
                       Icon(
-                        Icons.check_circle,
+                        Icons.emoji_events,
                         color: AppColors.primary,
                         size: 48,
                       ),
                       const SizedBox(height: 12),
+                      // Strong congratulatory message
                       Text(
-                        'أحسنت! لقد أكملت جميع مهام اليوم',
+                        'مبارك! أكملت جميع مهام اليوم',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
@@ -174,15 +176,16 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
+                      // Encouraging message about next day
                       Text(
-                        'عد غدًا للمزيد من التقدم في حفظ القرآن الكريم',
+                        'واصل التقدم غداً للمزيد من حفظ القرآن الكريم',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppColors.textSecondary,
                         ),
                         textAlign: TextAlign.center,
                       ),
                       
-                      // Preview of tomorrow's tasks if available
+                      // Only show tomorrow's preview if available
                       if (scheduleProvider.weekSchedule.length > 1) 
                         _buildTomorrowPreview(context, scheduleProvider.weekSchedule[1]),
                     ],
@@ -247,51 +250,96 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
     );
   }
 
-  // FIX: New method to build tomorrow's preview
+  // Build a clear preview of tomorrow's tasks
   Widget _buildTomorrowPreview(BuildContext context, schedule_provider.DaySchedule tomorrowSchedule) {
     if (tomorrowSchedule.sessions.isEmpty) {
       return const SizedBox.shrink();
     }
     
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center, // Center alignment for better appearance
       children: [
         const SizedBox(height: 16),
         const Divider(),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         
-        Text(
-          'مهام الغد:',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            color: AppColors.textSecondary,
-            fontWeight: FontWeight.bold,
+        // Clear heading for tomorrow's tasks
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            'يمكنك البدء في مهام الغد:',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
         
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         
-        // Show the first session as preview
+        // Show the first session as preview with more details
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.primaryLight),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 5,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             children: [
-              Icon(
-                _getSessionTypeIcon(tomorrowSchedule.sessions[0].type),
-                color: AppColors.primary,
-                size: 16,
+              // Session type icon with background
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _getSessionTypeColor(tomorrowSchedule.sessions[0].type).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _getSessionTypeIcon(tomorrowSchedule.sessions[0].type),
+                  color: _getSessionTypeColor(tomorrowSchedule.sessions[0].type),
+                  size: 20,
+                ),
               ),
-              const SizedBox(width: 8),
+              
+              const SizedBox(width: 12),
+              
+              // Session details
               Expanded(
-                child: Text(
-                  '${tomorrowSchedule.sessions[0].surahName} ${tomorrowSchedule.sessions[0].verseRange}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _getSessionTypeText(tomorrowSchedule.sessions[0].type),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: _getSessionTypeColor(tomorrowSchedule.sessions[0].type),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      '${tomorrowSchedule.sessions[0].surahName} ${tomorrowSchedule.sessions[0].verseRange}',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    // Add verse count
+                    Text(
+                      'عدد الآيات: ${tomorrowSchedule.sessions[0].endVerse - tomorrowSchedule.sessions[0].startVerse + 1}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -299,6 +347,18 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
         ),
       ],
     );
+  }
+  
+  // Helper for session type colors
+  Color _getSessionTypeColor(schedule_provider.SessionType type) {
+    switch (type) {
+      case schedule_provider.SessionType.newMemorization:
+        return AppColors.primary;
+      case schedule_provider.SessionType.recentReview:
+        return AppColors.secondary;
+      case schedule_provider.SessionType.oldReview:
+        return AppColors.tertiary;
+    }
   }
   
   // Helper for session type icons
@@ -310,6 +370,18 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
         return Icons.refresh;
       case schedule_provider.SessionType.oldReview:
         return Icons.replay;
+    }
+  }
+  
+  // Helper for session type text
+  String _getSessionTypeText(schedule_provider.SessionType type) {
+    switch (type) {
+      case schedule_provider.SessionType.newMemorization:
+        return 'حفظ جديد';
+      case schedule_provider.SessionType.recentReview:
+        return 'مراجعة حديثة';
+      case schedule_provider.SessionType.oldReview:
+        return 'مراجعة سابقة';
     }
   }
 
@@ -345,7 +417,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
         break;
     }
 
-    // FIX: Determine if task is completed based on verse count
+    // Task is complete if either isCompleted flag is true or verses are fully memorized
     final isTaskComplete = task.isCompleted || task.completedVerses >= task.totalVerses;
 
     return Container(
