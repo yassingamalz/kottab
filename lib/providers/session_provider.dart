@@ -1,3 +1,4 @@
+import "package:flutter/material.dart";
 import 'package:flutter/foundation.dart';
 import 'package:kottab/models/surah_model.dart';
 import 'package:kottab/models/verse_set_model.dart';
@@ -64,6 +65,7 @@ enum SessionType {
 
 /// Provider to manage memorization sessions
 class SessionProvider extends ChangeNotifier {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   final MemorizationService _memorizationService = MemorizationService();
 
   List<MemorizationSession> _recentSessions = [];
@@ -447,7 +449,7 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Save the current session and record it
+  /// Save the current session and record it - IMPROVED to ensure UI updates
   Future<bool> saveCurrentSession() async {
     if (_currentSession == null) return false;
 
@@ -491,6 +493,11 @@ class SessionProvider extends ChangeNotifier {
 
         // Force notify listeners to ensure all UI is updated
         notifyListeners();
+        
+        // Schedule another UI refresh after a short delay
+        Future.delayed(Duration(milliseconds: 300), () {
+          notifyListeners();
+        });
       }
 
       return success;
