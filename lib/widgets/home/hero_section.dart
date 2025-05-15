@@ -106,11 +106,9 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
   
   // Get overall average progress
   double _getOverallProgress() {
-    if (widget.memorizedPercentage > 0) {
-      return widget.memorizedPercentage;
-    } else {
-      return (widget.newMemProgress + widget.recentReviewProgress + widget.oldReviewProgress) / 3;
-    }
+    // FIXED: Only return actual memorization percentage, 
+    // don't use ring averages as fallback to avoid showing fake progress
+    return widget.memorizedPercentage;
   }
 
   @override
