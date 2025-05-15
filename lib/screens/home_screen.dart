@@ -16,6 +16,7 @@ import 'package:kottab/providers/statistics_provider.dart';
 import 'package:kottab/providers/settings_provider.dart';
 import 'package:kottab/providers/session_provider.dart';
 import 'package:kottab/models/user_model.dart';
+import 'package:kottab/models/verse_set_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -70,8 +71,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           // Build dynamic weekly data from user progress
           final weeklyData = _buildWeeklyDataFromUser(settingsProvider);
           
-          // Build dynamic focus tasks from schedule
-          final focusTasks = _buildFocusTasksFromSchedule(scheduleProvider);
+          // Get due verse sets from the session provider
+          final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+          final dueSets = sessionProvider.dueSets;
+          
+          // Build dynamic focus tasks from due sets
+          final focusTasks = _buildFocusTasksFromDueSets(dueSets, scheduleProvider);
 
           // Calculate progress for the hero section
           // Primary progress is the overall memorization percentage 
@@ -89,7 +94,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             recentProgress = primaryProgress * 0.9; // 90% of total memorized
             oldProgress = primaryProgress * 0.6; // 60% of total memorized
           }
-          // Removed the else block with default values - circles will show 0 when no real data
           
           // Build activities from recent sessions
           final activities = _buildActivitiesFromRecentSessions(context);
@@ -307,86 +311,120 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     });
   }
   
-  // Build focus tasks from schedule and user data
-  List<FocusTaskData> _buildFocusTasksFromSchedule(ScheduleProvider.ScheduleProvider provider) {
-    if (provider.isLoading || provider.weekSchedule.isEmpty) {
-      // Return sample data if no schedule
+  // Build focus tasks from due verse sets
+  List<FocusTaskData> _buildFocusTasksFromDueSets(List<VerseSet> dueSets, ScheduleProvider.ScheduleProvider provider) {
+    if (dueSets.isEmpty) {
+      // Return sample data if no due sets
       return [
         FocusTaskData(
           title: "البقرة ٦١-٧٠",
           type: TaskType.newMemorization,
           completedVerses: 0,
           totalVerses: provider.dailyVerseTarget, 
-          progress: 0.65,
+          progress: 0.0,
         ),
         FocusTaskData(
           title: "البقرة ٤١-٦٠",
           type: TaskType.recentReview,
-          completedVerses: provider.reviewSetSize,
+          completedVerses: 0,
           totalVerses: provider.reviewSetSize,
-          progress: 0.9,
-          isCompleted: true,
+          progress: 0.0,
         ),
         FocusTaskData(
           title: "البقرة ١-٢٠",
           type: TaskType.oldReview,
           completedVerses: 0,
           totalVerses: 20,
-          progress: 0.4,
+          progress: 0.0,
         ),
       ];
     }
     
     final result = <FocusTaskData>[];
     
-    // Get today's schedule
-    final todaySchedule = provider.weekSchedule.first;
+    // Categorize due sets by type
+    final newSets = <VerseSet>[];
+    final recentSets = <VerseSet>[];
+    final oldSets = <VerseSet>[];
     
-    // Process each session type
-    for (final session in todaySchedule.sessions) {
-      TaskType taskType;
-      switch (session.type) {
-        case ScheduleProvider.SessionType.newMemorization:
-          taskType = TaskType.newMemorization;
-          break;
-        case ScheduleProvider.SessionType.recentReview:
-          taskType = TaskType.recentReview;
-          break;
-        case ScheduleProvider.SessionType.oldReview:
-          taskType = TaskType.oldReview;
-          break;
-      }
-      
-      // Calculate a more realistic progress value
-      double progress = 0.0;
-      if (session.isCompleted) {
-        progress = 1.0;
+    for (final set in dueSets) {
+      if (set.status == MemorizationStatus.notStarted) {
+        newSets.add(set);
+      } else if (set.repetitionCount <= 2) {
+        recentSets.add(set);
       } else {
-        // Calculate some reasonable progress estimate based on scheduleProvider data
-        // This is a placeholder - in a real app you'd have actual progress data
-        final progressFactor = (session.type == ScheduleProvider.SessionType.newMemorization) ? 0.65 :
-                              (session.type == ScheduleProvider.SessionType.recentReview) ? 0.8 : 0.4;
-        progress = progressFactor;
+        oldSets.add(set);
       }
-      
+    }
+    
+    // Add a task for each category
+    // New memorization
+    if (newSets.isNotEmpty) {
+      final set = newSets.first;
       result.add(FocusTaskData(
-        title: "${session.surahName} ${session.verseRange}",
-        type: taskType,
-        completedVerses: session.isCompleted ? (session.endVerse - session.startVerse + 1) : 0,
-        totalVerses: session.endVerse - session.startVerse + 1,
-        progress: progress,
-        isCompleted: session.isCompleted,
+        title: "${set.surahId == 2 ? 'البقرة' : 'سورة ${set.surahId}'} ${set.startVerse}-${set.endVerse}",
+        type: TaskType.newMemorization,
+        completedVerses: 0,
+        totalVerses: set.verseCount,
+        progress: set.progressPercentage,
+        isCompleted: set.status == MemorizationStatus.memorized,
       ));
     }
     
-    // If no sessions were found for any type, add defaults
+    // Recent review
+    if (recentSets.isNotEmpty) {
+      final set = recentSets.first;
+      result.add(FocusTaskData(
+        title: "${set.surahId == 2 ? 'البقرة' : 'سورة ${set.surahId}'} ${set.startVerse}-${set.endVerse}",
+        type: TaskType.recentReview,
+        completedVerses: 0,
+        totalVerses: set.verseCount,
+        progress: set.progressPercentage,
+        isCompleted: set.status == MemorizationStatus.memorized,
+      ));
+    }
+    
+    // Old review
+    if (oldSets.isNotEmpty) {
+      final set = oldSets.first;
+      result.add(FocusTaskData(
+        title: "${set.surahId == 2 ? 'البقرة' : 'سورة ${set.surahId}'} ${set.startVerse}-${set.endVerse}",
+        type: TaskType.oldReview,
+        completedVerses: 0,
+        totalVerses: set.verseCount,
+        progress: set.progressPercentage,
+        isCompleted: set.status == MemorizationStatus.memorized,
+      ));
+    }
+    
+    // Ensure we have at least one of each type
     if (!result.any((task) => task.type == TaskType.newMemorization)) {
       result.add(FocusTaskData(
         title: "البقرة ١-${provider.dailyVerseTarget}",
         type: TaskType.newMemorization,
         completedVerses: 0,
         totalVerses: provider.dailyVerseTarget,
-        progress: 0.65,
+        progress: 0.0,
+      ));
+    }
+    
+    if (!result.any((task) => task.type == TaskType.recentReview)) {
+      result.add(FocusTaskData(
+        title: "البقرة ١-${provider.reviewSetSize}",
+        type: TaskType.recentReview,
+        completedVerses: 0,
+        totalVerses: provider.reviewSetSize,
+        progress: 0.0,
+      ));
+    }
+    
+    if (!result.any((task) => task.type == TaskType.oldReview)) {
+      result.add(FocusTaskData(
+        title: "البقرة ١-٢٠",
+        type: TaskType.oldReview,
+        completedVerses: 0,
+        totalVerses: 20,
+        progress: 0.0,
       ));
     }
     
