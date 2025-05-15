@@ -55,7 +55,23 @@ class MemorizationService {
     );
   }
 
-  /// Record a memorization session with improved error checking
+  /// Generate a verse set respecting surah boundaries
+  VerseSet generateVerseSet(int surahId, int startVerse, int maxVerseCount) {
+    final surah = QuranData.getSurahById(surahId);
+    
+    // Ensure we don't exceed the surah's verse count
+    final endVerse = startVerse + maxVerseCount - 1 <= surah.verseCount 
+        ? startVerse + maxVerseCount - 1 
+        : surah.verseCount;
+    
+    return VerseSet.create(
+      surahId: surahId,
+      startVerse: startVerse,
+      endVerse: endVerse,
+    );
+  }
+
+  /// Record a memorization session with improved error checking and SM-2 algorithm
   Future<bool> recordMemorizationSession({
     required int surahId,
     required int startVerse,
@@ -86,20 +102,12 @@ class MemorizationService {
       final surah = surahs[surahIndex];
       
       // Find the verse set by ID
-      // If exact set not found, find all sets that overlap with the range
-      final matchingSets = surah.verseSets.where((set) {
-        return set.id == setId || 
-              (set.startVerse <= endVerse && set.endVerse >= startVerse);
-      }).toList();
+      final matchingSetIndex = surah.verseSets.indexWhere((set) => set.id == setId);
       
-      if (matchingSets.isEmpty) {
-        print('No matching verse sets found for $setId');
+      if (matchingSetIndex == -1) {
+        print('Verse set not found: $setId');
         // Create a new verse set if none exists
-        final newSet = VerseSet.create(
-          surahId: surahId,
-          startVerse: startVerse,
-          endVerse: endVerse,
-        );
+        final newSet = generateVerseSet(surahId, startVerse, endVerse - startVerse + 1);
         
         // Add review directly to the new set
         final updatedSet = newSet.addReview(quality, notes: notes);
@@ -123,28 +131,26 @@ class MemorizationService {
         return true;
       }
       
-      // Update each matching set with the new review
-      for (final set in matchingSets) {
-        // Update the verse set with the new review
-        final updatedSet = set.addReview(quality, notes: notes);
-        
-        // Update memorized sets list if needed
-        if (updatedSet.status == MemorizationStatus.memorized) {
-          final memorizedSets = await AppPreferences.loadMemorizedSets();
-          if (!memorizedSets.contains(set.id)) {
-            memorizedSets.add(set.id);
-            await AppPreferences.saveMemorizedSets(memorizedSets);
-            print('Added to memorized sets: ${set.id}');
-          }
+      // Update the existing verse set with the new review
+      final existingSet = surah.verseSets[matchingSetIndex];
+      final updatedSet = existingSet.addReview(quality, notes: notes);
+      
+      // Update memorized sets list if needed
+      if (updatedSet.status == MemorizationStatus.memorized && 
+          existingSet.status != MemorizationStatus.memorized) {
+        final memorizedSets = await AppPreferences.loadMemorizedSets();
+        if (!memorizedSets.contains(setId)) {
+          memorizedSets.add(setId);
+          await AppPreferences.saveMemorizedSets(memorizedSets);
+          print('Added to memorized sets: ${setId}');
         }
-        
-        // Update user statistics
-        await _updateStatistics(surahId, updatedSet);
       }
-
+      
+      // Update user statistics
+      await _updateStatistics(surahId, updatedSet);
+      
       // Update user daily progress
-      final totalVerses = endVerse - startVerse + 1;
-      await _updateUserProgress(totalVerses);
+      await _updateUserProgress(updatedSet.verseCount);
 
       return true;
     } catch (e) {
@@ -153,88 +159,74 @@ class MemorizationService {
     }
   }
 
-  /// Generate today's memorization plan according to current settings
+  /// Generate today's memorization plan according to current settings and SM-2 algorithm
   Future<Map<String, List<VerseSet>>> generateTodayPlan() async {
     final user = await getUser();
     final memorizedSets = await AppPreferences.loadMemorizedSets();
     final surahs = await getSurahsWithProgress();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
 
     // Get settings - use user settings or defaults
     final dailyVerseTarget = user.settings['dailyVerseTarget'] as int? ?? 10;
     final reviewSetSize = user.settings['reviewSetSize'] as int? ?? 20;
     final oldReviewCycle = user.settings['oldReviewCycle'] as int? ?? 5;
 
-    // Find sets for new memorization
+    // Find sets for new memorization, recent review, and old review
     final newSets = <VerseSet>[];
     final recentSets = <VerseSet>[];
     final oldSets = <VerseSet>[];
 
-    // Find the next set to memorize (first not started set)
-    int targetNewVerses = 0;
+    // Find all verse sets due for review today based on nextReviewDate
+    // and categorize them based on their repetition count
     for (final surah in surahs) {
-      if (targetNewVerses >= dailyVerseTarget) break;
-      
       for (final set in surah.verseSets) {
+        // Skip sets that aren't due today
+        if (set.nextReviewDate == null || set.nextReviewDate!.isAfter(today)) {
+          continue;
+        }
+        
+        // Categorize based on repetition count and status
         if (set.status == MemorizationStatus.notStarted) {
-          if (targetNewVerses + set.verseCount <= dailyVerseTarget) {
+          if (newSets.length < 1) { // Limit to one new set per day
             newSets.add(set);
-            targetNewVerses += set.verseCount;
-          } else {
-            // If next set would exceed daily target, we could split it in a real app
-            // For now, just add it if we have no sets yet
-            if (newSets.isEmpty) {
-              newSets.add(set);
-            }
+          }
+        } else if (set.repetitionCount <= 2) {
+          // Recent review (early in SM-2 cycle)
+          recentSets.add(set);
+        } else {
+          // Old review (further along in SM-2 cycle)
+          oldSets.add(set);
+        }
+      }
+    }
+    
+    // If no new sets are due, find the next not started set
+    if (newSets.isEmpty) {
+      for (final surah in surahs) {
+        bool found = false;
+        for (final set in surah.verseSets) {
+          if (set.status == MemorizationStatus.notStarted) {
+            newSets.add(set);
+            found = true;
             break;
           }
         }
+        if (found) break;
       }
     }
 
-    // Find recently memorized sets for review - use dynamic reviewSetSize
-    int recentVerseCount = 0;
-    for (final surah in surahs) {
-      if (recentVerseCount >= reviewSetSize) break;
-      
-      for (final set in surah.verseSets) {
-        if (set.status == MemorizationStatus.memorized &&
-            recentVerseCount < reviewSetSize) {
-          // Sort by recent first
-          if (set.lastReviewDate != null) {
-            recentSets.add(set);
-            recentVerseCount += set.verseCount;
-          }
-        }
-      }
-    }
-
-    // Sort recent sets by last review date
+    // Sort recent sets by review date (most recent first)
     recentSets.sort((a, b) {
       if (a.lastReviewDate == null) return 1;
       if (b.lastReviewDate == null) return -1;
       return b.lastReviewDate!.compareTo(a.lastReviewDate!);
     });
 
-    // Take only the most recent sets up to the review set size
-    final topRecentSets = recentSets.take(2).toList();
-
-    // Find older memorized sets for periodic review based on oldReviewCycle
-    final now = DateTime.now();
-    for (final surah in surahs) {
-      for (final set in surah.verseSets) {
-        if (set.status == MemorizationStatus.memorized &&
-            set.lastReviewDate != null) {
-          final daysSinceReview = now.difference(set.lastReviewDate!).inDays;
-          if (daysSinceReview >= oldReviewCycle &&
-              !topRecentSets.contains(set)) {
-            oldSets.add(set);
-          }
-        }
-      }
-    }
-
     // Sort old sets by days since last review
     oldSets.sort((a, b) {
+      if (a.lastReviewDate == null) return 1;
+      if (b.lastReviewDate == null) return -1;
       final aDays = now.difference(a.lastReviewDate!).inDays;
       final bDays = now.difference(b.lastReviewDate!).inDays;
       return bDays.compareTo(aDays); // Descending order
@@ -245,7 +237,7 @@ class MemorizationService {
 
     return {
       'new': newSets,
-      'recent': topRecentSets,
+      'recent': recentSets.take(2).toList(), // Limit to 2 recent sets
       'old': topOldSets,
     };
   }
@@ -282,6 +274,26 @@ class MemorizationService {
     );
     
     await AppPreferences.saveStatistics(updatedStats);
+  }
+
+  /// Get due verse sets for today
+  Future<List<VerseSet>> getDueVerseSets() async {
+    final surahs = await getSurahsWithProgress();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    final dueSets = <VerseSet>[];
+    
+    for (final surah in surahs) {
+      for (final set in surah.verseSets) {
+        if (set.nextReviewDate != null && 
+            !set.nextReviewDate!.isAfter(today)) {
+          dueSets.add(set);
+        }
+      }
+    }
+    
+    return dueSets;
   }
 
   /// Update user statistics after a memorization session
