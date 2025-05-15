@@ -46,6 +46,12 @@ class VerseSet {
   final List<ReviewSession> reviewHistory;
   final double progressPercentage; // 0.0 to 1.0 for in-progress sets
   final DateTime? lastReviewDate;
+  
+  // SM-2 algorithm specific fields
+  final int repetitionCount; // n in the algorithm
+  final double easinessFactor; // EF in the algorithm
+  final int interval; // I in the algorithm (days)
+  final DateTime? nextReviewDate;
 
   const VerseSet({
     required this.id,
@@ -56,6 +62,10 @@ class VerseSet {
     this.reviewHistory = const [],
     this.progressPercentage = 0.0,
     this.lastReviewDate,
+    this.repetitionCount = 0,
+    this.easinessFactor = 2.5,
+    this.interval = 1,
+    this.nextReviewDate,
   });
 
   /// The number of verses in this set
@@ -77,6 +87,41 @@ class VerseSet {
     return sum / reviewHistory.length;
   }
 
+  /// Calculate the next interval based on SM-2 algorithm
+  int calculateNextInterval(double quality) {
+    // Convert quality from 0.0-1.0 to 0-5 scale for SM-2
+    final sm2Quality = (quality * 5).round();
+    
+    if (sm2Quality < 3) {
+      // Failed recall - reset to 1 day
+      return 1;
+    }
+    
+    // Successful recall - apply SM-2 interval calculation
+    int newRepetitionCount = repetitionCount + 1;
+    
+    if (newRepetitionCount == 1) {
+      return 1; // First interval is always 1 day
+    } else if (newRepetitionCount == 2) {
+      return 6; // Second interval is always 6 days
+    } else {
+      // For subsequent intervals: I(n) = I(n-1) * EF
+      return (interval * easinessFactor).ceil();
+    }
+  }
+  
+  /// Calculate the next easiness factor based on SM-2 algorithm
+  double calculateNextEasinessFactor(double quality) {
+    // Convert quality from 0.0-1.0 to 0-5 scale for SM-2
+    final sm2Quality = (quality * 5).round();
+    
+    // Update EF using the SM-2 formula
+    double newEF = easinessFactor + 0.1 - (5 - sm2Quality) * (0.08 + 0.02 * (5 - sm2Quality));
+    
+    // Ensure EF doesn't go below 1.3
+    return newEF < 1.3 ? 1.3 : newEF;
+  }
+
   /// Add a new review session to this verse set
   VerseSet addReview(double quality, {String notes = ''}) {
     final newReview = ReviewSession(
@@ -84,12 +129,52 @@ class VerseSet {
       quality: quality,
       notes: notes,
     );
+    
+    // Convert quality from 0.0-1.0 to 0-5 scale for SM-2
+    final sm2Quality = (quality * 5).round();
+    
+    // Update repetition count based on recall success
+    int newRepetitionCount = sm2Quality >= 3 ? repetitionCount + 1 : 0;
+    
+    // Calculate new easiness factor
+    double newEF = calculateNextEasinessFactor(quality);
+    
+    // Calculate next interval
+    int newInterval;
+    if (sm2Quality < 3) {
+      // Failed recall - reset
+      newInterval = 1;
+    } else if (newRepetitionCount == 1) {
+      newInterval = 1;
+    } else if (newRepetitionCount == 2) {
+      newInterval = 6;
+    } else {
+      newInterval = (interval * newEF).ceil();
+    }
+    
+    // Calculate next review date
+    final now = DateTime.now();
+    final nextDate = DateTime(now.year, now.month, now.day + newInterval);
+    
+    // Determine new status
+    MemorizationStatus newStatus;
+    if (newRepetitionCount >= 3 && quality > 0.8) {
+      newStatus = MemorizationStatus.memorized;
+    } else if (newRepetitionCount > 0 || quality > 0.0) {
+      newStatus = MemorizationStatus.inProgress;
+    } else {
+      newStatus = MemorizationStatus.notStarted;
+    }
 
     return copyWith(
-      status: quality > 0.8 ? MemorizationStatus.memorized : MemorizationStatus.inProgress,
+      status: newStatus,
       progressPercentage: quality,
-      lastReviewDate: DateTime.now(),
+      lastReviewDate: now,
       reviewHistory: [...reviewHistory, newReview],
+      repetitionCount: newRepetitionCount,
+      easinessFactor: newEF,
+      interval: newInterval,
+      nextReviewDate: nextDate,
     );
   }
 
@@ -103,6 +188,10 @@ class VerseSet {
     List<ReviewSession>? reviewHistory,
     double? progressPercentage,
     DateTime? lastReviewDate,
+    int? repetitionCount,
+    double? easinessFactor,
+    int? interval,
+    DateTime? nextReviewDate,
   }) {
     return VerseSet(
       id: id ?? this.id,
@@ -113,6 +202,10 @@ class VerseSet {
       reviewHistory: reviewHistory ?? this.reviewHistory,
       progressPercentage: progressPercentage ?? this.progressPercentage,
       lastReviewDate: lastReviewDate ?? this.lastReviewDate,
+      repetitionCount: repetitionCount ?? this.repetitionCount,
+      easinessFactor: easinessFactor ?? this.easinessFactor,
+      interval: interval ?? this.interval,
+      nextReviewDate: nextReviewDate ?? this.nextReviewDate,
     );
   }
 
@@ -127,6 +220,10 @@ class VerseSet {
       'reviewHistory': reviewHistory.map((review) => review.toJson()).toList(),
       'progressPercentage': progressPercentage,
       'lastReviewDate': lastReviewDate?.toIso8601String(),
+      'repetitionCount': repetitionCount,
+      'easinessFactor': easinessFactor,
+      'interval': interval,
+      'nextReviewDate': nextReviewDate?.toIso8601String(),
     };
   }
 
@@ -145,6 +242,12 @@ class VerseSet {
       lastReviewDate: json['lastReviewDate'] != null
           ? DateTime.parse(json['lastReviewDate'])
           : null,
+      repetitionCount: json['repetitionCount'] ?? 0,
+      easinessFactor: json['easinessFactor'] ?? 2.5,
+      interval: json['interval'] ?? 1,
+      nextReviewDate: json['nextReviewDate'] != null
+          ? DateTime.parse(json['nextReviewDate'])
+          : null,
     );
   }
 
@@ -154,11 +257,18 @@ class VerseSet {
     required int startVerse,
     required int endVerse,
   }) {
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    
     return VerseSet(
       id: '$surahId:$startVerse-$endVerse',
       surahId: surahId,
       startVerse: startVerse,
       endVerse: endVerse,
+      repetitionCount: 0,
+      easinessFactor: 2.5,
+      interval: 1,
+      nextReviewDate: tomorrow,
     );
   }
 }
