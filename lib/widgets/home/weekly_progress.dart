@@ -30,17 +30,18 @@ class WeeklyProgress extends StatelessWidget {
                 'تقدم الأسبوع',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
+                  fontSize: 18, // Increased font size
                 ),
               ),
               SeeAllButton(onPressed: onViewAll),
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 20), // Increased spacing
 
           // Weekly progress rings - ensure fixed height to prevent overflow
           SizedBox(
-            height: 85, // Set a fixed height to contain all elements
+            height: 90, // Increased fixed height
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: weekData.map((data) => _buildDayProgressRing(context, data)).toList(),
@@ -61,14 +62,14 @@ class WeeklyProgress extends StatelessWidget {
           children: [
             // Ring
             SizedBox(
-              width: 40,
-              height: 40,
+              width: 44, // Increased ring size
+              height: 44, // Increased ring size
               child: CustomPaint(
                 painter: _CircleProgressPainter(
                   progress: data.progress,
                   color: data.isToday ? AppColors.primary : Colors.blueGrey.shade300,
                   backgroundColor: Colors.grey.shade100,
-                  strokeWidth: 3,
+                  strokeWidth: 3.5, // Slightly increased stroke width
                 ),
               ),
             ),
@@ -79,8 +80,8 @@ class WeeklyProgress extends StatelessWidget {
                 top: 0,
                 right: 0,
                 child: Container(
-                  width: 8,
-                  height: 8,
+                  width: 10, // Increased dot size
+                  height: 10, // Increased dot size
                   decoration: BoxDecoration(
                     color: AppColors.primary,
                     shape: BoxShape.circle,
@@ -94,13 +95,13 @@ class WeeklyProgress extends StatelessWidget {
           ],
         ),
 
-        const SizedBox(height: 4),
+        const SizedBox(height: 6), // Increased spacing
 
         // Day abbreviation
         Text(
           data.shortName,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 14, // Increased font size
             fontWeight: data.isToday ? FontWeight.bold : FontWeight.normal,
             color: data.isToday ? AppColors.primary : AppColors.textSecondary,
           ),
