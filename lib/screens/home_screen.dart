@@ -333,6 +333,131 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ];
   }
   
+  // Build focus tasks from due verse sets - with improved completion detection
+  List<FocusTaskData> _buildFocusTasksFromDueSets(List<VerseSet> dueSets, ScheduleProvider.ScheduleProvider provider) {
+    final surahs = Provider.of<QuranProvider>(context, listen: false).surahs;
+    
+    if (dueSets.isEmpty) {
+      // If no due sets, determine next Surah for memorization
+      final nextSurahId = _determineNextSurahForMemorization(surahs);
+      final surahName = _getSurahDisplayName(nextSurahId, surahs);
+      
+      // Use appropriate verse count based on Surah
+      int verseCount = 7; // Default
+      try {
+        final surah = surahs.firstWhere((s) => s.id == nextSurahId);
+        verseCount = surah.verseSets.isNotEmpty ? 
+            surah.verseSets.first.verseCount :
+            (nextSurahId == 1 ? 7 : 5); // Al-Fatiha has 7 verses, default others to 5
+      } catch (e) {
+        // Use defaults
+      }
+      
+      return [
+        FocusTaskData(
+          title: "$surahName ١-$verseCount",
+          type: TaskType.newMemorization,
+          completedVerses: 0,
+          totalVerses: verseCount, 
+          progress: 0.0,
+        ),
+      ];
+    }
+    
+    final result = <FocusTaskData>[];
+    
+    // Categorize due sets by type
+    final newSets = <VerseSet>[];
+    final recentSets = <VerseSet>[];
+    final oldSets = <VerseSet>[];
+    
+    for (final set in dueSets) {
+      if (set.status == MemorizationStatus.notStarted) {
+        newSets.add(set);
+      } else if (set.repetitionCount <= 2) {
+        recentSets.add(set);
+      } else {
+        oldSets.add(set);
+      }
+    }
+    
+    // Add a task for each category
+    // New memorization
+    if (newSets.isNotEmpty) {
+      final set = newSets.first;
+      result.add(FocusTaskData(
+        title: "${_getSurahDisplayName(set.surahId, surahs)} ${set.startVerse}-${set.endVerse}",
+        type: TaskType.newMemorization,
+        completedVerses: set.status == MemorizationStatus.memorized ? set.verseCount : 
+                         (set.status == MemorizationStatus.inProgress ? 
+                           (set.verseCount * set.progressPercentage).round() : 0),
+        totalVerses: set.verseCount,
+        progress: set.progressPercentage,
+        isCompleted: set.status == MemorizationStatus.memorized || 
+                    (set.status == MemorizationStatus.inProgress && set.progressPercentage >= 0.9),
+      ));
+    }
+    
+    // Recent review
+    if (recentSets.isNotEmpty) {
+      final set = recentSets.first;
+      result.add(FocusTaskData(
+        title: "${_getSurahDisplayName(set.surahId, surahs)} ${set.startVerse}-${set.endVerse}",
+        type: TaskType.recentReview,
+        completedVerses: set.status == MemorizationStatus.memorized ? set.verseCount : 
+                         (set.status == MemorizationStatus.inProgress ? 
+                           (set.verseCount * set.progressPercentage).round() : 0),
+        totalVerses: set.verseCount,
+        progress: set.progressPercentage,
+        isCompleted: set.status == MemorizationStatus.memorized || 
+                    (set.status == MemorizationStatus.inProgress && set.progressPercentage >= 0.9),
+      ));
+    }
+    
+    // Old review
+    if (oldSets.isNotEmpty) {
+      final set = oldSets.first;
+      result.add(FocusTaskData(
+        title: "${_getSurahDisplayName(set.surahId, surahs)} ${set.startVerse}-${set.endVerse}",
+        type: TaskType.oldReview,
+        completedVerses: set.status == MemorizationStatus.memorized ? set.verseCount : 
+                         (set.status == MemorizationStatus.inProgress ? 
+                           (set.verseCount * set.progressPercentage).round() : 0),
+        totalVerses: set.verseCount,
+        progress: set.progressPercentage,
+        isCompleted: set.status == MemorizationStatus.memorized || 
+                    (set.status == MemorizationStatus.inProgress && set.progressPercentage >= 0.9),
+      ));
+    }
+    
+    // If no focus tasks were added, find next Surah to memorize
+    if (result.isEmpty) {
+      final nextSurahId = _determineNextSurahForMemorization(surahs);
+      final surahName = _getSurahDisplayName(nextSurahId, surahs);
+      
+      // Use appropriate verse count based on Surah
+      int verseCount = 7; // Default
+      try {
+        final surah = surahs.firstWhere((s) => s.id == nextSurahId);
+        verseCount = surah.verseSets.isNotEmpty ? 
+            surah.verseSets.first.verseCount :
+            (nextSurahId == 1 ? 7 : 5); // Al-Fatiha has 7 verses, default others to 5
+      } catch (e) {
+        // Use defaults
+      }
+      
+      result.add(FocusTaskData(
+        title: "$surahName ١-$verseCount",
+        type: TaskType.newMemorization,
+        completedVerses: 0,
+        totalVerses: verseCount,
+        progress: 0.0,
+      ));
+    }
+    
+    return result;
+  }
+  
   // Function to determine next Surah for memorization based on current progress
   int _determineNextSurahForMemorization(List<Surah> surahs) {
     // First check if Al-Fatiha is fully memorized
@@ -440,122 +565,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         isToday: day.year == now.year && day.month == now.month && day.day == now.day,
       );
     });
-  }
-  
-  // Build focus tasks from due verse sets
-  List<FocusTaskData> _buildFocusTasksFromDueSets(List<VerseSet> dueSets, ScheduleProvider.ScheduleProvider provider) {
-    final surahs = Provider.of<QuranProvider>(context, listen: false).surahs;
-    
-    if (dueSets.isEmpty) {
-      // If no due sets, determine next Surah for memorization
-      final nextSurahId = _determineNextSurahForMemorization(surahs);
-      final surahName = _getSurahDisplayName(nextSurahId, surahs);
-      
-      // Use appropriate verse count based on Surah
-      int verseCount = 7; // Default
-      try {
-        final surah = surahs.firstWhere((s) => s.id == nextSurahId);
-        verseCount = surah.verseSets.isNotEmpty ? 
-            surah.verseSets.first.verseCount :
-            (nextSurahId == 1 ? 7 : 5); // Al-Fatiha has 7 verses, default others to 5
-      } catch (e) {
-        // Use defaults
-      }
-      
-      return [
-        FocusTaskData(
-          title: "$surahName ١-$verseCount",
-          type: TaskType.newMemorization,
-          completedVerses: 0,
-          totalVerses: verseCount, 
-          progress: 0.0,
-        ),
-      ];
-    }
-    
-    final result = <FocusTaskData>[];
-    
-    // Categorize due sets by type
-    final newSets = <VerseSet>[];
-    final recentSets = <VerseSet>[];
-    final oldSets = <VerseSet>[];
-    
-    for (final set in dueSets) {
-      if (set.status == MemorizationStatus.notStarted) {
-        newSets.add(set);
-      } else if (set.repetitionCount <= 2) {
-        recentSets.add(set);
-      } else {
-        oldSets.add(set);
-      }
-    }
-    
-    // Add a task for each category
-    // New memorization
-    if (newSets.isNotEmpty) {
-      final set = newSets.first;
-      result.add(FocusTaskData(
-        title: "${_getSurahDisplayName(set.surahId, surahs)} ${set.startVerse}-${set.endVerse}",
-        type: TaskType.newMemorization,
-        completedVerses: 0,
-        totalVerses: set.verseCount,
-        progress: set.progressPercentage,
-        isCompleted: set.status == MemorizationStatus.memorized,
-      ));
-    }
-    
-    // Recent review
-    if (recentSets.isNotEmpty) {
-      final set = recentSets.first;
-      result.add(FocusTaskData(
-        title: "${_getSurahDisplayName(set.surahId, surahs)} ${set.startVerse}-${set.endVerse}",
-        type: TaskType.recentReview,
-        completedVerses: 0,
-        totalVerses: set.verseCount,
-        progress: set.progressPercentage,
-        isCompleted: set.status == MemorizationStatus.memorized,
-      ));
-    }
-    
-    // Old review
-    if (oldSets.isNotEmpty) {
-      final set = oldSets.first;
-      result.add(FocusTaskData(
-        title: "${_getSurahDisplayName(set.surahId, surahs)} ${set.startVerse}-${set.endVerse}",
-        type: TaskType.oldReview,
-        completedVerses: 0,
-        totalVerses: set.verseCount,
-        progress: set.progressPercentage,
-        isCompleted: set.status == MemorizationStatus.memorized,
-      ));
-    }
-    
-    // If no focus tasks were added, find next Surah to memorize
-    if (result.isEmpty) {
-      final nextSurahId = _determineNextSurahForMemorization(surahs);
-      final surahName = _getSurahDisplayName(nextSurahId, surahs);
-      
-      // Use appropriate verse count based on Surah
-      int verseCount = 7; // Default
-      try {
-        final surah = surahs.firstWhere((s) => s.id == nextSurahId);
-        verseCount = surah.verseSets.isNotEmpty ? 
-            surah.verseSets.first.verseCount :
-            (nextSurahId == 1 ? 7 : 5); // Al-Fatiha has 7 verses, default others to 5
-      } catch (e) {
-        // Use defaults
-      }
-      
-      result.add(FocusTaskData(
-        title: "$surahName ١-$verseCount",
-        type: TaskType.newMemorization,
-        completedVerses: 0,
-        totalVerses: verseCount,
-        progress: 0.0,
-      ));
-    }
-    
-    return result;
   }
   
   // Build activities from recent sessions - no sample data for first launch

@@ -156,15 +156,17 @@ class VerseSet {
     final now = DateTime.now();
     final nextDate = DateTime(now.year, now.month, now.day + newInterval);
     
-    // FIXED: Modified the status determination for better progress tracking
+    // IMPROVED: Modified the status determination for better responsiveness
     // Consider the set memorized if:
-    // 1. Quality is excellent (>= 0.8) and we've reviewed it at least once, OR
-    // 2. We've reviewed it repeatedly (repetitionCount >= 2) with at least decent quality (>= 0.6)
+    // 1. Quality is excellent (>= 0.9) regardless of repetition count, OR
+    // 2. Quality is good (>= 0.7) and we've reviewed it at least once, OR
+    // 3. We've reviewed it repeatedly (repetitionCount >= 2) with at least decent quality (>= 0.5)
     MemorizationStatus newStatus;
     
-    if ((quality >= 0.8 && reviewHistory.length >= 1) || 
-        (newRepetitionCount >= 2 && quality >= 0.6)) {
-      // Mark as memorized with good quality and multiple reviews
+    if (quality >= 0.9 || 
+        (quality >= 0.7 && reviewHistory.length >= 1) || 
+        (newRepetitionCount >= 2 && quality >= 0.5)) {
+      // Mark as memorized with good quality
       print("Verse set ${id} marked as MEMORIZED: quality=${quality}, repCount=${newRepetitionCount}");
       newStatus = MemorizationStatus.memorized;
     } else if (reviewHistory.length > 0 || quality > 0.0) {

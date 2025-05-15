@@ -68,7 +68,8 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
     if (!needsUpdate) {
       for (int i = 0; i < widget.tasks.length; i++) {
         if (i >= oldWidget.tasks.length || 
-            oldWidget.tasks[i].progress != widget.tasks[i].progress) {
+            oldWidget.tasks[i].progress != widget.tasks[i].progress ||
+            oldWidget.tasks[i].isCompleted != widget.tasks[i].isCompleted) {
           needsUpdate = true;
           break;
         }
@@ -96,6 +97,9 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
         // Get daily verse target from settings
         final int dailyTarget = scheduleProvider.dailyVerseTarget;
         
+        // Check if all tasks are completed
+        final bool allTasksCompleted = widget.tasks.every((task) => task.isCompleted);
+
         return Container(
           width: double.infinity,
           color: Colors.white,
@@ -143,22 +147,59 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
 
               const SizedBox(height: 16),
 
-              // Task cards with animated progress
-              ...List.generate(widget.tasks.length, (index) {
-                return AnimatedBuilder(
-                  animation: _animController,
-                  builder: (context, child) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildTaskCard(
-                        context, 
-                        widget.tasks[index],
-                        _progressAnimations[index]?.value ?? 0.0,
+              // Show message when all tasks are completed
+              if (allTasksCompleted)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: AppColors.primary,
+                        size: 48,
                       ),
-                    );
-                  },
-                );
-              }),
+                      const SizedBox(height: 12),
+                      Text(
+                        'أحسنت! لقد أكملت جميع مهام اليوم',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'عد غدًا للمزيد من التقدم في حفظ القرآن الكريم',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                )
+              else
+                // Task cards with animated progress
+                ...List.generate(widget.tasks.length, (index) {
+                  return AnimatedBuilder(
+                    animation: _animController,
+                    builder: (context, child) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildTaskCard(
+                          context, 
+                          widget.tasks[index],
+                          _progressAnimations[index]?.value ?? 0.0,
+                        ),
+                      );
+                    },
+                  );
+                }),
 
               const SizedBox(height: 16),
 
@@ -186,7 +227,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                     const Icon(Icons.bolt, size: 16),
                     const SizedBox(width: 8),
                     Text(
-                      'متابعة الحفظ',
+                      allTasksCompleted ? 'عرض التفاصيل' : 'متابعة الحفظ',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         color: Colors.white,
                       ),
@@ -247,10 +288,10 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
             child: Align(
               alignment: Alignment.centerRight,
               child: FractionallySizedBox(
-                widthFactor: animatedProgress, // Use animated value here
+                widthFactor: task.isCompleted ? 1.0 : animatedProgress, // Always 100% for completed tasks
                 child: Container(
                   decoration: BoxDecoration(
-                    color: iconBgColor.withOpacity(0.2),
+                    color: task.isCompleted ? iconBgColor.withOpacity(0.4) : iconBgColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),

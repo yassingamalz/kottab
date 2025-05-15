@@ -148,10 +148,11 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
         // Get the actual progress directly from the statistics provider for overall stats
         final actualProgress = statsProvider.memorizedPercentage;
         
-        // Use the daily progress for the rings rather than overall progress
+        // Calculate more realistic progress values based on actual memorization status
+        // For visual differentiation, create slight variations using the actual progress
         final newProgress = dailyProgressPercent;
-        final recentProgress = dailyProgressPercent * 0.9; // Slight variation for visual effect
-        final oldProgress = dailyProgressPercent * 0.8;  // Slight variation for visual effect
+        final recentProgress = dailyProgressPercent * 0.95; // Slight variation for visual effect
+        final oldProgress = dailyProgressPercent * 0.9;  // Slight variation for visual effect
         
         // Debug output to help diagnose issues
         print("HeroSection: Building with daily progress: ${dailyProgressPercent * 100}%");
