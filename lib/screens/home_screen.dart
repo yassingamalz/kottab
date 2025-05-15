@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:kottab/providers/statistics_provider.dart';
 import 'package:kottab/providers/settings_provider.dart';
 import 'package:kottab/providers/session_provider.dart';
+import 'package:kottab/models/user_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -284,7 +285,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       // Check if we have progress for this day
       final dailyProgress = user.dailyProgress.firstWhere(
         (p) => p.date.year == day.year && p.date.month == day.month && p.date.day == day.day,
-        orElse: () => DailyProgress(date: day, progress: 0.0, completedVerses: 0, targetVerses: 10)
+        orElse: () => DailyProgress(
+          date: day, 
+          progress: 0.0, 
+          completedVerses: 0, 
+          targetVerses: 10
+        )
       );
       
       return DailyProgressData(
