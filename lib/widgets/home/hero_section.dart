@@ -18,6 +18,7 @@ class HeroSection extends StatefulWidget {
   final int completedOldVerses;
   final int targetOldVerses;
   final int streak;
+  final double memorizedPercentage;
 
   const HeroSection({
     super.key,
@@ -31,6 +32,7 @@ class HeroSection extends StatefulWidget {
     required this.completedOldVerses,
     required this.targetOldVerses,
     required this.streak,
+    this.memorizedPercentage = 0.0,
   });
 
   @override
@@ -56,14 +58,10 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
   }
 
   void _initializeAnimations() {
-    // Use consumer data or widget values, prioritizing consumer data
-    final statsProvider = Provider.of<StatisticsProvider>(context, listen: false);
-    final realProgress = statsProvider.memorizedPercentage;
-    
-    // Use actual values with fallback to widget values
+    // Initialize animations with correct progress values
     _newMemAnimation = Tween<double>(
       begin: 0.0,
-      end: realProgress > 0 ? realProgress : widget.newMemProgress,
+      end: widget.newMemProgress.clamp(0.0, 1.0),
     ).animate(CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeOutCubic,
@@ -71,7 +69,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
 
     _recentReviewAnimation = Tween<double>( 
       begin: 0.0,
-      end: widget.recentReviewProgress,
+      end: widget.recentReviewProgress.clamp(0.0, 1.0),
     ).animate(CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeOutCubic,
@@ -79,7 +77,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
 
     _oldReviewAnimation = Tween<double>(
       begin: 0.0,
-      end: widget.oldReviewProgress,
+      end: widget.oldReviewProgress.clamp(0.0, 1.0),
     ).animate(CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeOutCubic,
@@ -89,13 +87,15 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
   @override
   void didUpdateWidget(HeroSection oldWidget) {
     super.didUpdateWidget(oldWidget);
+    
+    // If any of the progress values have changed, update and restart animations
     if (oldWidget.newMemProgress != widget.newMemProgress ||
         oldWidget.recentReviewProgress != widget.recentReviewProgress ||
-        oldWidget.oldReviewProgress != widget.oldReviewProgress) {
+        oldWidget.oldReviewProgress != widget.oldReviewProgress ||
+        oldWidget.memorizedPercentage != widget.memorizedPercentage) {
       _initializeAnimations();
       _animationController.forward(from: 0.0);
     }
-    
   }
 
   @override
@@ -106,7 +106,11 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
   
   // Get overall average progress
   double _getOverallProgress() {
-    return (widget.newMemProgress + widget.recentReviewProgress + widget.oldReviewProgress) / 3;
+    if (widget.memorizedPercentage > 0) {
+      return widget.memorizedPercentage;
+    } else {
+      return (widget.newMemProgress + widget.recentReviewProgress + widget.oldReviewProgress) / 3;
+    }
   }
 
   @override
@@ -215,8 +219,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  ArabicNumbers.formatPercentage(statsProvider.memorizedPercentage > 0 
-                                    ? statsProvider.memorizedPercentage : _getOverallProgress()),
+                                  ArabicNumbers.formatPercentage(_getOverallProgress()),
                                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),
