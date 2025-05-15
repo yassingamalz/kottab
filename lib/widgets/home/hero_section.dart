@@ -133,12 +133,12 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
         // Get today's progress if available
         final todayProgress = user?.todayProgress;
         
-        // FIX: Calculate daily progress percentage for task completion
+        // Calculate daily progress percentage for display in the central circle
         double dailyProgressPercent = 0.0;
         String dailyProgressText = '٠٪';
         
         if (todayProgress != null) {
-          // FIX: If we've completed our target verses, show 100%
+          // If we've completed our target verses, show 100%
           if (todayProgress.completedVerses >= todayProgress.targetVerses) {
             dailyProgressPercent = 1.0; // 100%
             dailyProgressText = ArabicNumbers.formatPercentage(1.0);
@@ -156,8 +156,8 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
         // Get the actual progress directly from the statistics provider for overall stats
         final actualProgress = statsProvider.memorizedPercentage;
         
-        // FIX: For visual differentiation, create slight variations using the actual progress
-        // but ensure they reflect task completion status
+        // Calculate more realistic progress values based on actual memorization status
+        // For visual differentiation, create slight variations using the actual progress
         final newProgress = dailyProgressPercent;
         final recentProgress = dailyProgressPercent > 0.9 ? 1.0 : dailyProgressPercent * 0.95; 
         final oldProgress = dailyProgressPercent > 0.8 ? 1.0 : dailyProgressPercent * 0.9;
@@ -258,12 +258,12 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                               strokeWidth: 8,
                             ),
                             
-                            // Center text - use real daily progress
+                            // Center text - ONLY show percentage here
                             Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  dailyProgressText,
+                                  dailyProgressText, // Shows percentage like ٧٠٪
                                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -284,7 +284,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                 ),
               ),
               
-              // Activity summaries
+              // Activity summaries - Always show as X/Y format
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -297,11 +297,8 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                       icon: Icons.bolt, 
                       color: AppColors.primary,
                       bgColor: AppColors.primaryLight,
-                      value: todayProgress != null 
-                          ? (todayProgress.completedVerses >= todayProgress.targetVerses)
-                              ? '١٠٠٪' // Show 100% if completed
-                              : '${ArabicNumbers.toArabicDigits(todayProgress.completedVerses)}/${ArabicNumbers.toArabicDigits(todayProgress.targetVerses)}'
-                          : '${ArabicNumbers.toArabicDigits(0)}/${ArabicNumbers.toArabicDigits(user?.settings['dailyVerseTarget'] as int? ?? 10)}',
+                      // ALWAYS show as verse counts in "X/Y" format 
+                      value: _getCountDisplay(widget.completedNewVerses, widget.targetNewVerses),
                       label: 'حفظ جديد',
                     ),
                   ),
@@ -315,11 +312,8 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                       icon: Icons.refresh, 
                       color: AppColors.secondary,
                       bgColor: AppColors.secondaryLight,
-                      value: todayProgress != null 
-                          ? (todayProgress.completedVerses >= todayProgress.targetVerses)
-                              ? '١٠٠٪' // Show 100% if completed
-                              : '${ArabicNumbers.toArabicDigits(todayProgress.completedVerses)}/${ArabicNumbers.toArabicDigits(todayProgress.targetVerses)}'
-                          : '${ArabicNumbers.toArabicDigits(0)}/${ArabicNumbers.toArabicDigits(user?.settings['dailyVerseTarget'] as int? ?? 10)}',
+                      // ALWAYS show as verse counts in "X/Y" format
+                      value: _getCountDisplay(widget.completedRecentVerses, widget.targetRecentVerses),
                       label: 'مراجعة حديثة',
                     ),
                   ),
@@ -333,11 +327,8 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                       icon: Icons.replay, 
                       color: AppColors.tertiary,
                       bgColor: AppColors.tertiaryLight,
-                      value: todayProgress != null 
-                          ? (todayProgress.completedVerses >= todayProgress.targetVerses)
-                              ? '١٠٠٪' // Show 100% if completed
-                              : '${ArabicNumbers.toArabicDigits(todayProgress.completedVerses)}/${ArabicNumbers.toArabicDigits(todayProgress.targetVerses)}'
-                          : '${ArabicNumbers.toArabicDigits(0)}/${ArabicNumbers.toArabicDigits(user?.settings['dailyVerseTarget'] as int? ?? 10)}',
+                      // ALWAYS show as verse counts in "X/Y" format
+                      value: _getCountDisplay(widget.completedOldVerses, widget.targetOldVerses),
                       label: 'مراجعة سابقة',
                     ),
                   ),
@@ -348,6 +339,20 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
         );
       },
     );
+  }
+  
+  // Helper method to format verse count display
+  String _getCountDisplay(int completed, int target) {
+    // If no target, show as 0/0
+    if (target == 0) {
+      return '٠/٠';
+    }
+    
+    // If completed is greater than target, cap it at target (100% completion)
+    int displayCompleted = completed > target ? target : completed;
+    
+    // Return in format "X/Y" using Arabic numerals
+    return '${ArabicNumbers.toArabicDigits(displayCompleted)}/${ArabicNumbers.toArabicDigits(target)}';
   }
   
   Widget _buildActivitySummary(
