@@ -190,94 +190,82 @@ class SessionProvider extends ChangeNotifier {
     int endVerse = 5;
     
     if (type == SessionType.newMemorization) {
+      // Always start with Al-Fatiha if not memorized yet
+      bool alFatihaMemorized = false;
+      if (_surahs.isNotEmpty) {
+        final fatiha = _surahs.firstWhere((s) => s.id == 1, orElse: () => null as Surah);
+        if (fatiha != null) {
+          alFatihaMemorized = fatiha.verseSets.every((set) => set.status == MemorizationStatus.memorized);
+        }
+      }
+      
+      // If not memorized Al-Fatiha yet and trying to memorize another surah, force Al-Fatiha
+      if (!alFatihaMemorized && surahId > 1) {
+        surahId = 1;
+        surah = _surahs.firstWhere((s) => s.id == 1, orElse: () => 
+          const Surah(id: 1, name: "Al-Fatihah", arabicName: "الفاتحة", verseCount: 7)
+        );
+      }
+      
       // For new memorization, find first non-memorized set
       if (surah != null && surah.verseSets.isNotEmpty) {
-        // Try to find a due set first
-        VerseSet? dueSet = _dueSets.firstWhere(
-          (set) => set.surahId == surahId && set.status == MemorizationStatus.notStarted,
-          orElse: () => null as VerseSet,
-        );
-        
-        if (dueSet != null) {
-          startVerse = dueSet.startVerse;
-          endVerse = dueSet.endVerse;
-        } else {
-          // Otherwise find first non-memorized set
+        // Try to find a not started set first
+        VerseSet? notStartedSet;
+        try {
+          notStartedSet = surah.verseSets.firstWhere(
+            (set) => set.status == MemorizationStatus.notStarted
+          );
+          startVerse = notStartedSet.startVerse;
+          endVerse = notStartedSet.endVerse;
+        } catch (e) {
+          // No not-started sets found, try to find sets in progress
           try {
-            final notStartedSet = surah.verseSets.firstWhere(
-                  (set) => set.status == MemorizationStatus.notStarted,
+            final inProgressSet = surah.verseSets.firstWhere(
+              (set) => set.status == MemorizationStatus.inProgress
             );
-            startVerse = notStartedSet.startVerse;
-            endVerse = notStartedSet.endVerse;
+            startVerse = inProgressSet.startVerse;
+            endVerse = inProgressSet.endVerse;
           } catch (e) {
-            // No not-started sets found, try to find the last set
-            if (surah.verseSets.isNotEmpty) {
-              final lastSet = surah.verseSets.reduce(
-                    (a, b) => a.endVerse > b.endVerse ? a : b,
-              );
-              // Start after the last verse
-              startVerse = lastSet.endVerse + 1;
-              
-              // Calculate end verse while respecting surah boundaries
-              // Apply the SM-2 rule: don't cross surah boundaries, and limit to verse count setting
-              final verseCount = dailyVerseTarget;
-              endVerse = Math.min(startVerse + verseCount - 1, surah.verseCount);
-              
-              // If startVerse is already past the surah's verse count,
-              // reset to verse 1 (this can happen with completed surahs)
-              if (startVerse > surah.verseCount) {
-                startVerse = 1;
-                endVerse = Math.min(startVerse + verseCount - 1, surah.verseCount);
-              }
-            }
+            // No sets found, use defaults starting at verse 1
+            startVerse = 1;
+            endVerse = Math.min(startVerse + dailyVerseTarget - 1, surah.verseCount);
           }
         }
       }
     } else {
-      // For reviews, find a due verse set
-      VerseSet? dueSet;
-      
-      if (type == SessionType.recentReview) {
-        // Find recent review due sets (repetition count <= 2)
-        dueSet = _dueSets.firstWhere(
-          (set) => set.surahId == surahId && 
-                  set.status != MemorizationStatus.notStarted && 
-                  set.repetitionCount <= 2,
-          orElse: () => null as VerseSet,
-        );
-      } else {
-        // Find old review due sets (repetition count > 2)
-        dueSet = _dueSets.firstWhere(
-          (set) => set.surahId == surahId && 
-                  set.status != MemorizationStatus.notStarted && 
-                  set.repetitionCount > 2,
-          orElse: () => null as VerseSet,
-        );
-      }
-      
-      if (dueSet != null) {
-        startVerse = dueSet.startVerse;
-        endVerse = dueSet.endVerse;
-      } else if (surah != null && surah.verseSets.isNotEmpty) {
-        // If no due sets found, use any verse set with appropriate status
-        try {
-          VerseSet? matchingSet;
+      // For reviews, find verse sets with status != notStarted
+      if (surah != null && surah.verseSets.isNotEmpty) {
+        List<VerseSet> reviewableSets = surah.verseSets.where(
+          (set) => set.status != MemorizationStatus.notStarted
+        ).toList();
+        
+        if (reviewableSets.isNotEmpty) {
+          // For recent review, sort by repetition count and last review date
           if (type == SessionType.recentReview) {
-            matchingSet = surah.verseSets.firstWhere(
-                  (set) => set.status == MemorizationStatus.inProgress,
-            );
+            reviewableSets.sort((a, b) {
+              // Sort by repetition count first (ascending)
+              if (a.repetitionCount != b.repetitionCount) {
+                return a.repetitionCount.compareTo(b.repetitionCount);
+              }
+              // Then by last review date (most recent first)
+              if (a.lastReviewDate != null && b.lastReviewDate != null) {
+                return b.lastReviewDate!.compareTo(a.lastReviewDate!);
+              }
+              return 0;
+            });
           } else {
-            matchingSet = surah.verseSets.firstWhere(
-                  (set) => set.status == MemorizationStatus.memorized,
-            );
+            // For old review, sort by repetition count (descending)
+            reviewableSets.sort((a, b) => b.repetitionCount.compareTo(a.repetitionCount));
           }
           
-          if (matchingSet != null) {
-            startVerse = matchingSet.startVerse;
-            endVerse = matchingSet.endVerse;
-          }
-        } catch (e) {
-          // Use default values if no matching sets found
+          // Use the first set after sorting
+          VerseSet setToReview = reviewableSets.first;
+          startVerse = setToReview.startVerse;
+          endVerse = setToReview.endVerse;
+        } else {
+          // Default with surah boundary check
+          startVerse = 1;
+          endVerse = Math.min(startVerse + 4, surah.verseCount);
         }
       }
     }
@@ -311,6 +299,25 @@ class SessionProvider extends ChangeNotifier {
   void updateSessionSurah(int surahId) {
     if (_currentSession == null) return;
 
+    // Always check if Al-Fatiha is memorized before allowing other surahs
+    if (_currentSession!.type == SessionType.newMemorization && surahId > 1) {
+      bool alFatihaMemorized = false;
+      if (_surahs.isNotEmpty) {
+        try {
+          final fatiha = _surahs.firstWhere((s) => s.id == 1);
+          alFatihaMemorized = fatiha.verseSets.every((set) => set.status == MemorizationStatus.memorized);
+        } catch (e) {
+          // Fatiha not found
+          alFatihaMemorized = false;
+        }
+      }
+      
+      // If Al-Fatiha not memorized, force it
+      if (!alFatihaMemorized) {
+        surahId = 1;
+      }
+    }
+
     // Find the surah
     Surah? surah;
     try {
@@ -339,10 +346,9 @@ class SessionProvider extends ChangeNotifier {
     
     if (_currentSession!.type == SessionType.newMemorization) {
       // For new memorization, find the first non-memorized verse set
-      VerseSet? notStartedSet;
       try {
-        notStartedSet = surah.verseSets.firstWhere(
-              (set) => set.status == MemorizationStatus.notStarted,
+        final notStartedSet = surah.verseSets.firstWhere(
+          (set) => set.status == MemorizationStatus.notStarted
         );
         startVerse = notStartedSet.startVerse;
         endVerse = notStartedSet.endVerse;
@@ -353,28 +359,33 @@ class SessionProvider extends ChangeNotifier {
       }
     } else {
       // For reviews, try to find appropriate verse sets
-      VerseSet? reviewSet;
-      if (_currentSession!.type == SessionType.recentReview) {
-        try {
-          reviewSet = surah.verseSets.firstWhere(
-                (set) => set.status == MemorizationStatus.inProgress,
-          );
-        } catch (e) {
-          reviewSet = null;
-        }
-      } else { // Old review
-        try {
-          reviewSet = surah.verseSets.firstWhere(
-                (set) => set.status == MemorizationStatus.memorized,
-          );
-        } catch (e) {
-          reviewSet = null;
-        }
-      }
+      List<VerseSet> reviewableSets = surah.verseSets.where(
+        (set) => set.status != MemorizationStatus.notStarted
+      ).toList();
       
-      if (reviewSet != null) {
-        startVerse = reviewSet.startVerse;
-        endVerse = reviewSet.endVerse;
+      if (reviewableSets.isNotEmpty) {
+        // For recent review, sort by repetition count and last review date
+        if (_currentSession!.type == SessionType.recentReview) {
+          reviewableSets.sort((a, b) {
+            // Sort by repetition count first (ascending)
+            if (a.repetitionCount != b.repetitionCount) {
+              return a.repetitionCount.compareTo(b.repetitionCount);
+            }
+            // Then by last review date (most recent first)
+            if (a.lastReviewDate != null && b.lastReviewDate != null) {
+              return b.lastReviewDate!.compareTo(a.lastReviewDate!);
+            }
+            return 0;
+          });
+        } else {
+          // For old review, sort by repetition count (descending)
+          reviewableSets.sort((a, b) => b.repetitionCount.compareTo(a.repetitionCount));
+        }
+        
+        // Use the first set after sorting
+        VerseSet setToReview = reviewableSets.first;
+        startVerse = setToReview.startVerse;
+        endVerse = setToReview.endVerse;
       } else {
         // Default with surah boundary check
         startVerse = 1;
@@ -544,10 +555,10 @@ class SessionProvider extends ChangeNotifier {
 
     return [
       MemorizationSession(
-        surahId: 2,
-        surahName: 'البقرة',
+        surahId: 1,
+        surahName: 'الفاتحة',
         startVerse: 1,
-        endVerse: 5,
+        endVerse: 7,
         timestamp: now.subtract(const Duration(hours: 2)),
         type: SessionType.newMemorization,
         quality: 0.9,
@@ -566,8 +577,8 @@ class SessionProvider extends ChangeNotifier {
       MemorizationSession(
         surahId: 2,
         surahName: 'البقرة',
-        startVerse: 6,
-        endVerse: 10,
+        startVerse: 1,
+        endVerse: 5,
         timestamp: now.subtract(const Duration(days: 2)),
         type: SessionType.newMemorization,
         quality: 0.7,
