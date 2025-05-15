@@ -44,6 +44,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
   late Animation<double> _newMemAnimation;
   late Animation<double> _recentReviewAnimation;
   late Animation<double> _oldReviewAnimation;
+  late Animation<double> _overallProgressAnimation;
 
   @override
   void initState() {
@@ -82,6 +83,15 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
       parent: _animationController,
       curve: Curves.easeOutCubic,
     ));
+    
+    // Add dedicated animation for overall progress
+    _overallProgressAnimation = Tween<double>(
+      begin: 0.0,
+      end: widget.memorizedPercentage.clamp(0.0, 1.0),
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
   }
 
   @override
@@ -93,6 +103,10 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
         oldWidget.recentReviewProgress != widget.recentReviewProgress ||
         oldWidget.oldReviewProgress != widget.oldReviewProgress ||
         oldWidget.memorizedPercentage != widget.memorizedPercentage) {
+        
+      print("HeroSection: Progress changed, updating animations");
+      print("Memorized percentage: ${widget.memorizedPercentage}");
+      
       _initializeAnimations();
       _animationController.forward(from: 0.0);
     }
@@ -104,13 +118,6 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
     super.dispose();
   }
   
-  // Get overall average progress
-  double _getOverallProgress() {
-    // FIXED: Only return actual memorization percentage, 
-    // don't use ring averages as fallback to avoid showing fake progress
-    return widget.memorizedPercentage;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Consumer2<StatisticsProvider, SettingsProvider>(
@@ -118,6 +125,12 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
         final now = DateTime.now();
         final String formattedDate = DateFormatter.formatArabicDate(now);
         final int streak = settingsProvider.user?.streak ?? widget.streak;
+
+        // Get the actual progress directly from the statistics provider for display
+        final actualProgress = statsProvider.memorizedPercentage;
+        
+        // Debug output to help diagnose issues
+        print("HeroSection: Building with memorized percentage: $actualProgress");
 
         return Container(
           width: double.infinity,
@@ -190,7 +203,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                           children: [
                             // Outer ring - Old review
                             CircleProgress(
-                              progress: _oldReviewAnimation.value,
+                              progress: actualProgress > 0.0 ? _oldReviewAnimation.value : 0.0,
                               color: AppColors.tertiary,
                               size: 180,
                               strokeWidth: 8,
@@ -198,7 +211,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                             
                             // Middle ring - Recent review
                             CircleProgress(
-                              progress: _recentReviewAnimation.value,
+                              progress: actualProgress > 0.0 ? _recentReviewAnimation.value : 0.0,
                               color: AppColors.secondary,
                               size: 150,
                               strokeWidth: 8,
@@ -206,7 +219,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                             
                             // Inner ring - New memorization
                             CircleProgress(
-                              progress: _newMemAnimation.value,
+                              progress: actualProgress > 0.0 ? _newMemAnimation.value : 0.0,
                               color: AppColors.primary,
                               size: 120,
                               strokeWidth: 8,
@@ -217,7 +230,7 @@ class _HeroSectionState extends State<HeroSection> with SingleTickerProviderStat
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  ArabicNumbers.formatPercentage(_getOverallProgress()),
+                                  ArabicNumbers.formatPercentage(actualProgress),
                                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),

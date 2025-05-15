@@ -22,6 +22,9 @@ class SurahCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Debug output to verify progress values
+    print('SurahCard for ${surah.arabicName}: Progress = ${surah.memorizedPercentage}');
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -85,30 +88,31 @@ class SurahCard extends StatelessWidget {
                     ),
                   ),
 
-                  // Progress indicator
-                  if (surah.memorizedPercentage > 0)
-                    Container(
-                      width: 40,
-                      height: 40,
-                      margin: const EdgeInsets.only(left: 8),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          CircularProgressIndicator(
-                            value: surah.memorizedPercentage,
-                            backgroundColor: Colors.grey.shade100,
-                            color: AppColors.primary,
-                            strokeWidth: 5,
+                  // Progress indicator - now always showing if progress is present
+                  Container(
+                    width: 40,
+                    height: 40,
+                    margin: const EdgeInsets.only(left: 8),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          value: surah.memorizedPercentage,
+                          backgroundColor: Colors.grey.shade100,
+                          color: AppColors.primary,
+                          strokeWidth: 5,
+                        ),
+                        Text(
+                          surah.memorizedPercentage > 0 
+                              ? ArabicNumbers.formatPercentage(surah.memorizedPercentage)
+                              : '٠٪',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
                           ),
-                          Text(
-                            ArabicNumbers.formatPercentage(surah.memorizedPercentage),
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
+                  ),
 
                   // Expand/collapse icon
                   AnimatedRotation(

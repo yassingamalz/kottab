@@ -32,6 +32,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   // Animation controller for tasks
   late AnimationController _progressController;
+  bool _initialLoadDone = false;
 
   @override
   void initState() {
@@ -43,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     
     // Force data refresh when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _refreshData();
+      _refreshData(forceUpdate: true);
     });
   }
   
@@ -51,10 +52,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void didChangeDependencies() {
     super.didChangeDependencies();
     // This ensures updates when returning from other screens
-    _refreshData();
+    if (_initialLoadDone) {
+      _refreshData();
+    }
   }
   
-  void _refreshData() {
+  void _refreshData({bool forceUpdate = false}) async {
+    print("HomeScreen: Refreshing data, forceUpdate=$forceUpdate");
+    
     final statsProvider = Provider.of<StatisticsProvider>(context, listen: false);
     final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
     final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
@@ -62,11 +67,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final quranProvider = Provider.of<QuranProvider>(context, listen: false);
     
     // Refresh all providers
-    statsProvider.refreshData();
-    settingsProvider.refreshData();
-    sessionProvider.refreshData();
-    scheduleProvider.refreshData();
-    quranProvider.refreshData();
+    await Future.wait([
+      statsProvider.refreshData(),
+      settingsProvider.refreshData(),
+      sessionProvider.refreshData(),
+      scheduleProvider.refreshData(),
+      quranProvider.refreshData(),
+    ]);
+    
+    // After refreshing, force rebuild UI
+    if (mounted) {
+      setState(() {
+        _initialLoadDone = true;
+      });
+      
+      if (forceUpdate) {
+        // Force additional notifyListeners to ensure UI updates
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) {
+            statsProvider.notifyListeners();
+            quranProvider.notifyListeners();
+          }
+        });
+      }
+    }
   }
   
   @override
@@ -90,9 +114,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Consumer<SessionProvider>(
-        builder: (context, sessionProvider, _) {
-          final statsProvider = Provider.of<StatisticsProvider>(context);
+      child: Consumer<StatisticsProvider>(
+        builder: (context, statsProvider, _) {
+          // Log the current statistics for debugging
+          print("HomeScreen build: Memorized percentage = ${statsProvider.memorizedPercentage}");
+          print("HomeScreen build: Memorized verses = ${statsProvider.memorizedVerses}");
+          
+          final sessionProvider = Provider.of<SessionProvider>(context);
           final settingsProvider = Provider.of<SettingsProvider>(context);
           final scheduleProvider = Provider.of<ScheduleProvider.ScheduleProvider>(context);
           final quranProvider = Provider.of<QuranProvider>(context);
@@ -140,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
           return RefreshIndicator(
             onRefresh: () async {
-              _refreshData();
+              _refreshData(forceUpdate: true);
             },
             child: SingleChildScrollView(
               child: Column(

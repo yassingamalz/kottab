@@ -10,6 +10,7 @@ class StatisticsProvider extends ChangeNotifier {
   Statistics _statistics = Statistics.initial();
   User? _user;
   bool _isLoading = true;
+  bool _isFirstLoad = true;
 
   StatisticsProvider() {
     _loadData();
@@ -21,14 +22,37 @@ class StatisticsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Log the statistics loading process
+      print("StatisticsProvider: Loading statistics data");
+      
       _statistics = await AppPreferences.loadStatistics();
       _user = await AppPreferences.loadUser();
       
       // Force statistics to refresh from actual data
-      await _memorizationService.refreshStatistics();
+      if (_isFirstLoad) {
+        await _memorizationService.refreshStatistics();
+        _isFirstLoad = false;
+      }
       
       // Reload statistics after the refresh
       _statistics = await AppPreferences.loadStatistics();
+      
+      // Ensure user data is in sync with statistics
+      if (_user != null) {
+        if (_user!.totalMemorizedVerses != _statistics.totalMemorizedVerses) {
+          // Update user's memorized verses count to match statistics
+          final updatedUser = _user!.copyWith(
+            totalMemorizedVerses: _statistics.totalMemorizedVerses
+          );
+          await AppPreferences.saveUser(updatedUser);
+          _user = updatedUser;
+        }
+      }
+      
+      // Print debug info
+      print("StatisticsProvider: Loaded statistics");
+      print("Total memorized verses: ${_statistics.totalMemorizedVerses}");
+      print("Quran percentage: ${_statistics.quranPercentage}");
     } catch (e) {
       print('Error loading statistics: $e');
     }
@@ -39,6 +63,7 @@ class StatisticsProvider extends ChangeNotifier {
 
   /// Refresh the statistics data
   Future<void> refreshData() async {
+    print("StatisticsProvider: Refreshing data");
     await _loadData();
   }
 
