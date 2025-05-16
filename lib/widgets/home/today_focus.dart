@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:kottab/config/app_colors.dart';
-import 'package:kottab/utils/arabic_numbers.dart';
-import 'package:provider/provider.dart';
-import 'package:kottab/providers/session_provider.dart' as session_provider;
 import 'package:kottab/providers/schedule_provider.dart' as schedule_provider;
+import 'package:kottab/providers/session_provider.dart' as session_provider;
+import 'package:kottab/utils/arabic_numbers.dart';
 import 'package:kottab/widgets/sessions/add_session_modal.dart';
+import 'package:provider/provider.dart';
 
 class TodayFocus extends StatefulWidget {
   final List<FocusTaskData> tasks;
@@ -20,12 +20,13 @@ class TodayFocus extends StatefulWidget {
   State<TodayFocus> createState() => _TodayFocusState();
 }
 
-class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateMixin {
+class _TodayFocusState extends State<TodayFocus>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animController;
-  
+
   // Create multiple animations for each task
   Map<int, Animation<double>> _progressAnimations = {};
-  
+
   @override
   void initState() {
     super.initState();
@@ -33,14 +34,14 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    
+
     // Initialize animations for each task
     _initializeAnimations();
-    
+
     // Start the animation
     _animController.forward();
   }
-  
+
   void _initializeAnimations() {
     for (int i = 0; i < widget.tasks.length; i++) {
       _progressAnimations[i] = Tween<double>(
@@ -58,16 +59,16 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
       );
     }
   }
-  
+
   @override
   void didUpdateWidget(TodayFocus oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // Check if tasks or progress values have changed
     bool needsUpdate = oldWidget.tasks.length != widget.tasks.length;
     if (!needsUpdate) {
       for (int i = 0; i < widget.tasks.length; i++) {
-        if (i >= oldWidget.tasks.length || 
+        if (i >= oldWidget.tasks.length ||
             oldWidget.tasks[i].progress != widget.tasks[i].progress ||
             oldWidget.tasks[i].isCompleted != widget.tasks[i].isCompleted) {
           needsUpdate = true;
@@ -75,7 +76,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
         }
       }
     }
-    
+
     if (needsUpdate) {
       // Reset animations
       _progressAnimations.clear();
@@ -92,18 +93,20 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<session_provider.SessionProvider, schedule_provider.ScheduleProvider>(
+    return Consumer2<session_provider.SessionProvider,
+        schedule_provider.ScheduleProvider>(
       builder: (context, sessionProvider, scheduleProvider, child) {
         // Get daily verse target from settings
         final int dailyTarget = scheduleProvider.dailyVerseTarget;
-        
+
         // Check if all tasks are completed
-        final bool allTasksCompleted = widget.tasks.every((task) => 
-          task.isCompleted || task.completedVerses >= task.totalVerses);
-        
+        final bool allTasksCompleted = widget.tasks.every((task) =>
+            task.isCompleted || task.completedVerses >= task.totalVerses);
+
         print("TodayFocus: allTasksCompleted = $allTasksCompleted");
         for (var task in widget.tasks) {
-          print("Task ${task.title}: isCompleted=${task.isCompleted}, completedVerses=${task.completedVerses}, totalVerses=${task.totalVerses}");
+          print(
+              "Task ${task.title}: isCompleted=${task.isCompleted}, completedVerses=${task.completedVerses}, totalVerses=${task.totalVerses}");
         }
 
         return Container(
@@ -120,11 +123,12 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                   Text(
                     'تركيز اليوم',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.primaryLight,
                       borderRadius: BorderRadius.circular(16),
@@ -140,10 +144,11 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                         const SizedBox(width: 4),
                         Text(
                           '${ArabicNumbers.toArabicDigits(dailyTarget)} آية',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                         ),
                       ],
                     ),
@@ -160,7 +165,8 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                   decoration: BoxDecoration(
                     color: AppColors.primaryLight.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                    border:
+                        Border.all(color: AppColors.primary.withOpacity(0.2)),
                   ),
                   child: Column(
                     children: [
@@ -174,10 +180,11 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                       // Strong congratulatory message
                       Text(
                         'مبارك! أكملت جميع مهام اليوم',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
@@ -185,14 +192,15 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                       Text(
                         'واصل التقدم غداً للمزيد من حفظ القرآن الكريم',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                              color: AppColors.textSecondary,
+                            ),
                         textAlign: TextAlign.center,
                       ),
-                      
+
                       // Only show tomorrow's preview if available
-                      if (scheduleProvider.weekSchedule.length > 1) 
-                        _buildTomorrowPreview(context, scheduleProvider.weekSchedule[1]),
+                      if (scheduleProvider.weekSchedule.length > 1)
+                        _buildTomorrowPreview(
+                            context, scheduleProvider.weekSchedule[1]),
                     ],
                   ),
                 )
@@ -205,7 +213,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _buildTaskCard(
-                          context, 
+                          context,
                           widget.tasks[index],
                           _progressAnimations[index]?.value ?? 0.0,
                         ),
@@ -242,8 +250,8 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                     Text(
                       allTasksCompleted ? 'عرض التفاصيل' : 'متابعة الحفظ',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: Colors.white,
-                      ),
+                            color: Colors.white,
+                          ),
                     ),
                   ],
                 ),
@@ -256,18 +264,20 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
   }
 
   // FIXED: Show all tomorrow's tasks, not just the first one
-  Widget _buildTomorrowPreview(BuildContext context, schedule_provider.DaySchedule tomorrowSchedule) {
+  Widget _buildTomorrowPreview(
+      BuildContext context, schedule_provider.DaySchedule tomorrowSchedule) {
     if (tomorrowSchedule.sessions.isEmpty) {
       return const SizedBox.shrink();
     }
-    
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.center, // Center alignment for better appearance
+      crossAxisAlignment: CrossAxisAlignment.center,
+      // Center alignment for better appearance
       children: [
         const SizedBox(height: 16),
         const Divider(),
         const SizedBox(height: 12),
-        
+
         // Clear heading for tomorrow's tasks
         Container(
           width: double.infinity,
@@ -279,15 +289,15 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
           child: Text(
             'يمكنك البدء في مهام الغد:',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.bold,
-            ),
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                ),
             textAlign: TextAlign.center,
           ),
         ),
-        
+
         const SizedBox(height: 12),
-        
+
         // Show ALL sessions for tomorrow, not just the first one
         ...tomorrowSchedule.sessions.map((session) {
           return Container(
@@ -296,7 +306,8 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _getSessionTypeColor(session.type).withOpacity(0.3)),
+              border: Border.all(
+                  color: _getSessionTypeColor(session.type).withOpacity(0.3)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
@@ -320,9 +331,9 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                     size: 20,
                   ),
                 ),
-                
+
                 const SizedBox(width: 12),
-                
+
                 // Session details
                 Expanded(
                   child: Column(
@@ -331,9 +342,9 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                       Text(
                         _getSessionTypeText(session.type),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: _getSessionTypeColor(session.type),
-                          fontWeight: FontWeight.w500,
-                        ),
+                              color: _getSessionTypeColor(session.type),
+                              fontWeight: FontWeight.w500,
+                            ),
                       ),
                       Text(
                         '${session.surahName} ${session.verseRange}',
@@ -343,8 +354,8 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                       Text(
                         'عدد الآيات: ${session.endVerse - session.startVerse + 1}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                              color: AppColors.textSecondary,
+                            ),
                       ),
                     ],
                   ),
@@ -356,7 +367,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
       ],
     );
   }
-  
+
   // Helper for session type colors
   Color _getSessionTypeColor(schedule_provider.SessionType type) {
     switch (type) {
@@ -368,7 +379,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
         return AppColors.tertiary;
     }
   }
-  
+
   // Helper for session type icons
   IconData _getSessionTypeIcon(schedule_provider.SessionType type) {
     switch (type) {
@@ -380,7 +391,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
         return Icons.replay;
     }
   }
-  
+
   // Helper for session type text
   String _getSessionTypeText(schedule_provider.SessionType type) {
     switch (type) {
@@ -393,7 +404,8 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
     }
   }
 
-  Widget _buildTaskCard(BuildContext context, FocusTaskData task, double animatedProgress) {
+  Widget _buildTaskCard(
+      BuildContext context, FocusTaskData task, double animatedProgress) {
     Color borderColor;
     Color progressColor;
     Color iconBgColor;
@@ -426,7 +438,8 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
     }
 
     // Task is complete if either isCompleted flag is true or verses are fully memorized
-    final isTaskComplete = task.isCompleted || task.completedVerses >= task.totalVerses;
+    final isTaskComplete =
+        task.isCompleted || task.completedVerses >= task.totalVerses;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -442,10 +455,13 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
             child: Align(
               alignment: Alignment.centerRight,
               child: FractionallySizedBox(
-                widthFactor: isTaskComplete ? 1.0 : animatedProgress, // Always 100% for completed tasks
+                widthFactor: isTaskComplete ? 1.0 : animatedProgress,
+                // Always 100% for completed tasks
                 child: Container(
                   decoration: BoxDecoration(
-                    color: isTaskComplete ? iconBgColor.withOpacity(0.4) : iconBgColor.withOpacity(0.2),
+                    color: isTaskComplete
+                        ? iconBgColor.withOpacity(0.4)
+                        : iconBgColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -481,8 +497,8 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                     Text(
                       _getTaskTypeText(task.type),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                            color: AppColors.textSecondary,
+                          ),
                     ),
                     Text(
                       task.title,
@@ -514,10 +530,13 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                           const SizedBox(width: 4),
                           Text(
                             'تم إكماله',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                         ],
                       ),
@@ -525,8 +544,8 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
                   : Text(
                       '${ArabicNumbers.toArabicDigits(task.completedVerses)}/${ArabicNumbers.toArabicDigits(task.totalVerses)} آية',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                            color: AppColors.textSecondary,
+                          ),
                     ),
             ],
           ),
@@ -534,7 +553,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
       ),
     );
   }
-  
+
   String _getTaskTypeText(TaskType type) {
     switch (type) {
       case TaskType.newMemorization:
@@ -545,15 +564,16 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
         return 'مراجعة سابقة';
     }
   }
-  
+
   /// Show add session modal
-  void _showAddSession(BuildContext context, session_provider.SessionProvider sessionProvider) {
+  void _showAddSession(
+      BuildContext context, session_provider.SessionProvider sessionProvider) {
     // Only if we have tasks to work with
     if (widget.tasks.isEmpty) return;
-    
+
     // Start with the first task
     final task = widget.tasks.first;
-    
+
     // Initialize session with this task's parameters
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Start a new session based on task type
@@ -561,7 +581,7 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
         surahId: int.tryParse(task.title.split(' ').first) ?? 1,
         type: _convertTaskTypeToSessionType(task.type),
       );
-      
+
       // Show the session modal
       showModalBottomSheet(
         context: context,
@@ -572,9 +592,10 @@ class _TodayFocusState extends State<TodayFocus> with SingleTickerProviderStateM
       );
     });
   }
-  
+
   /// Convert task type to session type
-  session_provider.SessionType _convertTaskTypeToSessionType(TaskType taskType) {
+  session_provider.SessionType _convertTaskTypeToSessionType(
+      TaskType taskType) {
     switch (taskType) {
       case TaskType.newMemorization:
         return session_provider.SessionType.newMemorization;
