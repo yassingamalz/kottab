@@ -1,8 +1,11 @@
-import "package:flutter/material.dart";
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:kottab/models/surah_model.dart';
 import 'package:kottab/models/verse_set_model.dart';
 import 'package:kottab/services/memorization_service.dart';
+
+/// Global navigator key for accessing the context anywhere
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// Model for a memorization session
 class MemorizationSession {
@@ -65,7 +68,6 @@ enum SessionType {
 
 /// Provider to manage memorization sessions
 class SessionProvider extends ChangeNotifier {
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   final MemorizationService _memorizationService = MemorizationService();
 
   List<MemorizationSession> _recentSessions = [];
@@ -449,7 +451,7 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Save the current session and record it - IMPROVED to ensure UI updates
+  /// FIXED: Enhanced save method to ensure UI updates properly
   Future<bool> saveCurrentSession() async {
     if (_currentSession == null) return false;
 
@@ -494,7 +496,7 @@ class SessionProvider extends ChangeNotifier {
         // Force notify listeners to ensure all UI is updated
         notifyListeners();
         
-        // Schedule another UI refresh after a short delay
+        // Schedule another UI refresh after a short delay to ensure UI updates
         Future.delayed(Duration(milliseconds: 300), () {
           notifyListeners();
         });
