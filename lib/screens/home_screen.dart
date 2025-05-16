@@ -29,10 +29,12 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   // Animation controller for tasks
   late AnimationController _progressController;
   bool _initialLoadDone = false;
+
   // Track if Al-Fatiha has been memorized
   bool _alFatihaMemorized = false;
 
@@ -43,13 +45,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    
+
     // Force data refresh when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshData(forceUpdate: true);
     });
   }
-  
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -58,16 +60,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       _refreshData();
     }
   }
-  
+
   void _refreshData({bool forceUpdate = false}) async {
     print("HomeScreen: Refreshing data, forceUpdate=$forceUpdate");
-    
-    final statsProvider = Provider.of<StatisticsProvider>(context, listen: false);
-    final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
-    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
-    final scheduleProvider = Provider.of<ScheduleProvider.ScheduleProvider>(context, listen: false);
+
+    final statsProvider =
+        Provider.of<StatisticsProvider>(context, listen: false);
+    final settingsProvider =
+        Provider.of<SettingsProvider>(context, listen: false);
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
+    final scheduleProvider =
+        Provider.of<ScheduleProvider.ScheduleProvider>(context, listen: false);
     final quranProvider = Provider.of<QuranProvider>(context, listen: false);
-    
+
     // Refresh all providers
     await Future.wait([
       statsProvider.refreshData(),
@@ -76,23 +82,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       scheduleProvider.refreshData(),
       quranProvider.refreshData(),
     ]);
-    
+
     // Check if Al-Fatiha is memorized
     final surahs = quranProvider.surahs;
     try {
       final fatiha = surahs.firstWhere((s) => s.id == 1);
-      _alFatihaMemorized = fatiha.verseSets.every((set) => set.status == MemorizationStatus.memorized);
+      _alFatihaMemorized = fatiha.verseSets
+          .every((set) => set.status == MemorizationStatus.memorized);
       print("HomeScreen: Al-Fatiha memorized status: $_alFatihaMemorized");
     } catch (e) {
       _alFatihaMemorized = false;
     }
-    
+
     // After refreshing, force rebuild UI
     if (mounted) {
       setState(() {
         _initialLoadDone = true;
       });
-      
+
       if (forceUpdate) {
         // Force additional notifyListeners to ensure UI updates
         Future.delayed(const Duration(milliseconds: 300), () {
@@ -104,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }
     }
   }
-  
+
   @override
   void dispose() {
     _progressController.dispose();
@@ -129,41 +136,45 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       child: Consumer<StatisticsProvider>(
         builder: (context, statsProvider, _) {
           // Log the current statistics for debugging
-          print("HomeScreen build: Memorized percentage = ${statsProvider.memorizedPercentage}");
-          print("HomeScreen build: Memorized verses = ${statsProvider.memorizedVerses}");
-          
+          print(
+              "HomeScreen build: Memorized percentage = ${statsProvider.memorizedPercentage}");
+          print(
+              "HomeScreen build: Memorized verses = ${statsProvider.memorizedVerses}");
+
           final sessionProvider = Provider.of<SessionProvider>(context);
           final settingsProvider = Provider.of<SettingsProvider>(context);
-          final scheduleProvider = Provider.of<ScheduleProvider.ScheduleProvider>(context);
+          final scheduleProvider =
+              Provider.of<ScheduleProvider.ScheduleProvider>(context);
           final quranProvider = Provider.of<QuranProvider>(context);
-          
+
           // Get user data
           final user = settingsProvider.user;
           final isFirstTime = _isFirstTimeUser(user);
-          
+
           // Get Quran data
           final surahs = quranProvider.surahs;
-          
+
           // Build dynamic weekly data from user progress
           final weeklyData = _buildWeeklyDataFromUser(settingsProvider);
-          
+
           // Get due verse sets from the session provider
           final dueSets = sessionProvider.dueSets;
-          
+
           // Build focus tasks - for first-time users, only show Al-Fatiha
-          final focusTasks = isFirstTime 
+          final focusTasks = isFirstTime
               ? _buildFirstTimeFocusTasks(surahs)
               : _buildFocusTasksFromDueSets(dueSets, scheduleProvider);
 
           // Calculate progress for the hero section
           // For first-time users, show zero progress
-          final primaryProgress = isFirstTime ? 0.0 : statsProvider.memorizedPercentage;
-          
+          final primaryProgress =
+              isFirstTime ? 0.0 : statsProvider.memorizedPercentage;
+
           // For the three rings, use ONLY real memorization data, don't use fake data
           double newProgress = 0.0;
           double recentProgress = 0.0;
           double oldProgress = 0.0;
-          
+
           // Use real memorization data if available, otherwise all zeros
           if (!isFirstTime && primaryProgress > 0) {
             // Scale the three progress values proportionally to the actual memorization
@@ -171,12 +182,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             recentProgress = primaryProgress * 0.9; // 90% of total memorized
             oldProgress = primaryProgress * 0.6; // 60% of total memorized
           }
-          
+
           // Build activities - empty for first-time users
-          final hasActivities = !isFirstTime && sessionProvider.recentSessions.isNotEmpty;
-          final List<ActivityItem> activities = hasActivities 
-              ? _buildActivitiesFromRecentSessions(context)
-              : [];
+          final hasActivities =
+              !isFirstTime && sessionProvider.recentSessions.isNotEmpty;
+          final List<ActivityItem> activities =
+              hasActivities ? _buildActivitiesFromRecentSessions(context) : [];
 
           return RefreshIndicator(
             onRefresh: () async {
@@ -191,12 +202,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     newMemProgress: newProgress,
                     recentReviewProgress: recentProgress,
                     oldReviewProgress: oldProgress,
-                    completedNewVerses: _getCompletedVerses(focusTasks, TaskType.newMemorization),
-                    targetNewVerses: _getTargetVerses(focusTasks, TaskType.newMemorization),
-                    completedRecentVerses: _getCompletedVerses(focusTasks, TaskType.recentReview),
-                    targetRecentVerses: _getTargetVerses(focusTasks, TaskType.recentReview),
-                    completedOldVerses: _getCompletedVerses(focusTasks, TaskType.oldReview),
-                    targetOldVerses: _getTargetVerses(focusTasks, TaskType.oldReview),
+                    completedNewVerses: _getCompletedVerses(
+                        focusTasks, TaskType.newMemorization),
+                    targetNewVerses:
+                        _getTargetVerses(focusTasks, TaskType.newMemorization),
+                    completedRecentVerses:
+                        _getCompletedVerses(focusTasks, TaskType.recentReview),
+                    targetRecentVerses:
+                        _getTargetVerses(focusTasks, TaskType.recentReview),
+                    completedOldVerses:
+                        _getCompletedVerses(focusTasks, TaskType.oldReview),
+                    targetOldVerses:
+                        _getTargetVerses(focusTasks, TaskType.oldReview),
                     streak: settingsProvider.user?.streak ?? 0,
                     memorizedPercentage: statsProvider.memorizedPercentage,
                   ),
@@ -209,7 +226,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     onViewAll: () {
                       // Navigate to weekly progress detail screen
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const WeeklyDetailScreen()),
+                        MaterialPageRoute(
+                            builder: (context) => const WeeklyDetailScreen()),
                       );
                     },
                   ),
@@ -236,11 +254,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         Expanded(
                           child: StatCard(
                             title: 'محفوظ',
-                            value: isFirstTime ? '0' : statsProvider.memorizedVerses.toString(),
+                            value: isFirstTime
+                                ? '0'
+                                : statsProvider.memorizedVerses.toString(),
                             suffix: 'آية',
-                            description: isFirstTime ? '0٪ من القرآن' : '${(statsProvider.memorizedPercentage * 100).toStringAsFixed(1)}٪ من القرآن',
+                            description: isFirstTime
+                                ? '0٪ من القرآن'
+                                : '${(statsProvider.memorizedPercentage * 100).toStringAsFixed(1)}٪ من القرآن',
                             icon: Icons.menu_book,
-                            progress: isFirstTime ? 0.0 : statsProvider.memorizedPercentage,
+                            progress: isFirstTime
+                                ? 0.0
+                                : statsProvider.memorizedPercentage,
                             iconColor: AppColors.primary,
                             bgColor: AppColors.primaryLight,
                             progressColor: AppColors.primary,
@@ -253,11 +277,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         Expanded(
                           child: StatCard(
                             title: 'التتابع',
-                            value: (settingsProvider.user?.streak ?? 0).toString(),
+                            value:
+                                (settingsProvider.user?.streak ?? 0).toString(),
                             suffix: 'يوم',
                             description: 'استمر في العمل!',
                             icon: Icons.trending_up,
-                            progress: _calculateStreakProgress(settingsProvider.user?.streak ?? 0),
+                            progress: _calculateStreakProgress(
+                                settingsProvider.user?.streak ?? 0),
                             iconColor: AppColors.primary,
                             bgColor: AppColors.primaryLight,
                             progressColor: AppColors.primary,
@@ -276,7 +302,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           onViewAll: () {
                             // Navigate to activity history
                             Navigator.of(context).push(
-                              MaterialPageRoute(builder: (context) => const ActivityDetailScreen()),
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      const ActivityDetailScreen()),
                             );
                           },
                         )
@@ -288,13 +316,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   !isFirstTime && statsProvider.memorizedVerses > 0
                       ? Consumer<StatisticsProvider>(
                           builder: (context, statsProvider, child) {
-                            final achievements = _buildAchievementsFromStats(statsProvider);
+                            final achievements =
+                                _buildAchievementsFromStats(statsProvider);
                             return AchievementRow(
                               achievements: achievements,
                               onViewAll: () {
                                 // Navigate to achievements
                                 Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (context) => const AchievementsScreen()),
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          const AchievementsScreen()),
                                 );
                               },
                             );
@@ -312,7 +343,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     );
   }
-  
+
   // Fix for first time user detection and handling
   bool _isFirstTimeUser(User? user) {
     return user?.isFirstTime ?? true;
@@ -333,7 +364,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         verseCount: 7,
       );
     }
-    
+
     return [
       FocusTaskData(
         title: "${fatiha.arabicName} ١-${fatiha.verseCount}",
@@ -344,12 +375,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     ];
   }
-  
+
   // Build focus tasks from due verse sets - with improved completion detection
-  List<FocusTaskData> _buildFocusTasksFromDueSets(List<VerseSet> dueSets, ScheduleProvider.ScheduleProvider provider) {
+  List<FocusTaskData> _buildFocusTasksFromDueSets(
+      List<VerseSet> dueSets, ScheduleProvider.ScheduleProvider provider) {
     final surahs = Provider.of<QuranProvider>(context, listen: false).surahs;
-    
-    // If Al-Fatiha is memorized and we don't have due sets, 
+
+    // If Al-Fatiha is memorized and we don't have due sets,
     // return completed Al-Fatiha task instead of showing Al-Baqarah immediately
     if (_alFatihaMemorized && dueSets.isEmpty) {
       // Show completed Al-Fatiha to trigger the congratulatory message
@@ -359,9 +391,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           FocusTaskData(
             title: "${fatiha.arabicName} ١-${fatiha.verseCount}",
             type: TaskType.newMemorization,
-            completedVerses: fatiha.verseCount, // All verses completed
+            completedVerses: fatiha.verseCount,
+            // All verses completed
             totalVerses: fatiha.verseCount,
-            progress: 1.0, // 100% progress
+            progress: 1.0,
+            // 100% progress
             isCompleted: true, // Explicitly mark as completed
           ),
         ];
@@ -369,41 +403,43 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         // Fallback if Al-Fatiha not found
       }
     }
-    
+
     if (dueSets.isEmpty) {
       // If no due sets, determine next Surah for memorization
       final nextSurahId = _determineNextSurahForMemorization(surahs);
       final surahName = _getSurahDisplayName(nextSurahId, surahs);
-      
+
       // Use appropriate verse count based on Surah
       int verseCount = 7; // Default
       try {
         final surah = surahs.firstWhere((s) => s.id == nextSurahId);
-        verseCount = surah.verseSets.isNotEmpty ? 
-            surah.verseSets.first.verseCount :
-            (nextSurahId == 1 ? 7 : 5); // Al-Fatiha has 7 verses, default others to 5
+        verseCount = surah.verseSets.isNotEmpty
+            ? surah.verseSets.first.verseCount
+            : (nextSurahId == 1
+                ? 7
+                : 5); // Al-Fatiha has 7 verses, default others to 5
       } catch (e) {
         // Use defaults
       }
-      
+
       return [
         FocusTaskData(
           title: "$surahName ١-$verseCount",
           type: TaskType.newMemorization,
           completedVerses: 0,
-          totalVerses: verseCount, 
+          totalVerses: verseCount,
           progress: 0.0,
         ),
       ];
     }
-    
+
     final result = <FocusTaskData>[];
-    
+
     // Categorize due sets by type
     final newSets = <VerseSet>[];
     final recentSets = <VerseSet>[];
     final oldSets = <VerseSet>[];
-    
+
     for (final set in dueSets) {
       if (set.status == MemorizationStatus.notStarted) {
         newSets.add(set);
@@ -413,72 +449,86 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         oldSets.add(set);
       }
     }
-    
+
     // Add a task for each category
     // New memorization
     if (newSets.isNotEmpty) {
       final set = newSets.first;
       result.add(FocusTaskData(
-        title: "${_getSurahDisplayName(set.surahId, surahs)} ${set.startVerse}-${set.endVerse}",
+        title:
+            "${_getSurahDisplayName(set.surahId, surahs)} ${set.startVerse}-${set.endVerse}",
         type: TaskType.newMemorization,
-        completedVerses: set.status == MemorizationStatus.memorized ? set.verseCount : 
-                         (set.status == MemorizationStatus.inProgress ? 
-                           (set.verseCount * set.progressPercentage).round() : 0),
+        completedVerses: set.status == MemorizationStatus.memorized
+            ? set.verseCount
+            : (set.status == MemorizationStatus.inProgress
+                ? (set.verseCount * set.progressPercentage).round()
+                : 0),
         totalVerses: set.verseCount,
         progress: set.progressPercentage,
-        isCompleted: set.status == MemorizationStatus.memorized || 
-                    (set.status == MemorizationStatus.inProgress && set.progressPercentage >= 0.9),
+        isCompleted: set.status == MemorizationStatus.memorized ||
+            (set.status == MemorizationStatus.inProgress &&
+                set.progressPercentage >= 0.9),
       ));
     }
-    
+
     // Recent review
     if (recentSets.isNotEmpty) {
       final set = recentSets.first;
       result.add(FocusTaskData(
-        title: "${_getSurahDisplayName(set.surahId, surahs)} ${set.startVerse}-${set.endVerse}",
+        title:
+            "${_getSurahDisplayName(set.surahId, surahs)} ${set.startVerse}-${set.endVerse}",
         type: TaskType.recentReview,
-        completedVerses: set.status == MemorizationStatus.memorized ? set.verseCount : 
-                         (set.status == MemorizationStatus.inProgress ? 
-                           (set.verseCount * set.progressPercentage).round() : 0),
+        completedVerses: set.status == MemorizationStatus.memorized
+            ? set.verseCount
+            : (set.status == MemorizationStatus.inProgress
+                ? (set.verseCount * set.progressPercentage).round()
+                : 0),
         totalVerses: set.verseCount,
         progress: set.progressPercentage,
-        isCompleted: set.status == MemorizationStatus.memorized || 
-                    (set.status == MemorizationStatus.inProgress && set.progressPercentage >= 0.9),
+        isCompleted: set.status == MemorizationStatus.memorized ||
+            (set.status == MemorizationStatus.inProgress &&
+                set.progressPercentage >= 0.9),
       ));
     }
-    
+
     // Old review
     if (oldSets.isNotEmpty) {
       final set = oldSets.first;
       result.add(FocusTaskData(
-        title: "${_getSurahDisplayName(set.surahId, surahs)} ${set.startVerse}-${set.endVerse}",
+        title:
+            "${_getSurahDisplayName(set.surahId, surahs)} ${set.startVerse}-${set.endVerse}",
         type: TaskType.oldReview,
-        completedVerses: set.status == MemorizationStatus.memorized ? set.verseCount : 
-                         (set.status == MemorizationStatus.inProgress ? 
-                           (set.verseCount * set.progressPercentage).round() : 0),
+        completedVerses: set.status == MemorizationStatus.memorized
+            ? set.verseCount
+            : (set.status == MemorizationStatus.inProgress
+                ? (set.verseCount * set.progressPercentage).round()
+                : 0),
         totalVerses: set.verseCount,
         progress: set.progressPercentage,
-        isCompleted: set.status == MemorizationStatus.memorized || 
-                    (set.status == MemorizationStatus.inProgress && set.progressPercentage >= 0.9),
+        isCompleted: set.status == MemorizationStatus.memorized ||
+            (set.status == MemorizationStatus.inProgress &&
+                set.progressPercentage >= 0.9),
       ));
     }
-    
+
     // If no focus tasks were added, find next Surah to memorize
     if (result.isEmpty) {
       final nextSurahId = _determineNextSurahForMemorization(surahs);
       final surahName = _getSurahDisplayName(nextSurahId, surahs);
-      
+
       // Use appropriate verse count based on Surah
       int verseCount = 7; // Default
       try {
         final surah = surahs.firstWhere((s) => s.id == nextSurahId);
-        verseCount = surah.verseSets.isNotEmpty ? 
-            surah.verseSets.first.verseCount :
-            (nextSurahId == 1 ? 7 : 5); // Al-Fatiha has 7 verses, default others to 5
+        verseCount = surah.verseSets.isNotEmpty
+            ? surah.verseSets.first.verseCount
+            : (nextSurahId == 1
+                ? 7
+                : 5); // Al-Fatiha has 7 verses, default others to 5
       } catch (e) {
         // Use defaults
       }
-      
+
       result.add(FocusTaskData(
         title: "$surahName ١-$verseCount",
         type: TaskType.newMemorization,
@@ -487,29 +537,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         progress: 0.0,
       ));
     }
-    
+
     return result;
   }
-  
-  // Function to determine next Surah for memorization based on current progress
+
   int _determineNextSurahForMemorization(List<Surah> surahs) {
     // First check if Al-Fatiha is fully memorized
     try {
       final fatiha = surahs.firstWhere((s) => s.id == 1);
-      bool fatihaMemorized = fatiha.verseSets.every((set) => set.status == MemorizationStatus.memorized);
-      
+      bool fatihaMemorized = fatiha.verseSets
+          .every((set) => set.status == MemorizationStatus.memorized);
+
       if (!fatihaMemorized) {
         return 1; // Return Al-Fatiha if not fully memorized
       }
-      
+
       // Find the first Surah that's not fully memorized
       for (final surah in surahs) {
-        bool surahMemorized = surah.verseSets.every((set) => set.status == MemorizationStatus.memorized);
+        bool surahMemorized = surah.verseSets
+            .every((set) => set.status == MemorizationStatus.memorized);
         if (!surahMemorized) {
           return surah.id;
         }
       }
-      
+
       // Default to next Surah if all are memorized
       return 1;
     } catch (e) {
@@ -517,83 +568,85 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       return 1;
     }
   }
-  
+
   // Calculate streak progress (0-1) with max streak of 30 days
   double _calculateStreakProgress(int streak) {
-    const int maxStreak = 30; // Consider 30 days as max for progress visualization
+    const int maxStreak =
+        30; // Consider 30 days as max for progress visualization
     return (streak / maxStreak).clamp(0.0, 1.0);
   }
-  
+
   // Get completed verses count for a task type - FIXED
   int _getCompletedVerses(List<FocusTaskData> tasks, TaskType type) {
     // First, check if Al-Fatiha is completed for newMemorization type
     if (type == TaskType.newMemorization && _alFatihaMemorized) {
       // Get Al-Fatiha from surahs
       try {
-        final surahs = Provider.of<QuranProvider>(context, listen: false).surahs;
+        final surahs =
+            Provider.of<QuranProvider>(context, listen: false).surahs;
         final fatiha = surahs.firstWhere((s) => s.id == 1);
-        return fatiha.verseCount; // Return the total verse count (7 for Al-Fatiha)
+        return fatiha
+            .verseCount; // Return the total verse count (7 for Al-Fatiha)
       } catch (e) {
         return 7; // Default Al-Fatiha verse count
       }
     }
-    
+
     // Check if there's a task of this type
-    final task = tasks.firstWhere(
-      (t) => t.type == type, 
-      orElse: () => FocusTaskData(
-        title: '', 
-        type: type, 
-        completedVerses: 0, 
-        totalVerses: type == TaskType.newMemorization ? 7 : 0, // Use 0 for review tasks with no assignment
-        progress: 0.0
-      )
-    );
-    
+    final task = tasks.firstWhere((t) => t.type == type,
+        orElse: () => FocusTaskData(
+            title: '',
+            type: type,
+            completedVerses: 0,
+            totalVerses: type == TaskType.newMemorization ? 7 : 0,
+            // Use 0 for review tasks with no assignment
+            progress: 0.0));
+
     return task.completedVerses;
   }
-  
+
   // Get target verses count for a task type - FIXED
   int _getTargetVerses(List<FocusTaskData> tasks, TaskType type) {
     // First, check if Al-Fatiha is completed for newMemorization type
     if (type == TaskType.newMemorization && _alFatihaMemorized) {
       // Get Al-Fatiha from surahs
       try {
-        final surahs = Provider.of<QuranProvider>(context, listen: false).surahs;
+        final surahs =
+            Provider.of<QuranProvider>(context, listen: false).surahs;
         final fatiha = surahs.firstWhere((s) => s.id == 1);
-        return fatiha.verseCount; // Return the total verse count (7 for Al-Fatiha)
+        return fatiha
+            .verseCount; // Return the total verse count (7 for Al-Fatiha)
       } catch (e) {
         return 7; // Default Al-Fatiha verse count
       }
     }
-    
+
     // Check if a task of this type exists
     final hasTaskOfType = tasks.any((t) => t.type == type);
-    
+
     // If no task exists for reviews, return 0 instead of default values
-    if (!hasTaskOfType && (type == TaskType.recentReview || type == TaskType.oldReview)) {
+    if (!hasTaskOfType &&
+        (type == TaskType.recentReview || type == TaskType.oldReview)) {
       return 0;
     }
-    
-    final task = tasks.firstWhere(
-      (t) => t.type == type, 
-      orElse: () => FocusTaskData(
-        title: '', 
-        type: type, 
-        completedVerses: 0, 
-        totalVerses: type == TaskType.newMemorization ? 7 : 0, // Use 0 for review tasks with no assignment
-        progress: 0.0
-      )
-    );
-    
+
+    final task = tasks.firstWhere((t) => t.type == type,
+        orElse: () => FocusTaskData(
+            title: '',
+            type: type,
+            completedVerses: 0,
+            totalVerses: type == TaskType.newMemorization ? 7 : 0,
+            // Use 0 for review tasks with no assignment
+            progress: 0.0));
+
     return task.totalVerses;
   }
-  
+
   // Build weekly data from user's daily progress
   List<DailyProgressData> _buildWeeklyDataFromUser(SettingsProvider provider) {
     final now = DateTime.now();
     final user = provider.user;
-    
+
     if (user == null || user.isFirstTime) {
       // Return empty progress rings for first-time users
       return [
@@ -601,56 +654,66 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         DailyProgressData(name: "الأحد", shortName: "ح", progress: 0.0),
         DailyProgressData(name: "الإثنين", shortName: "ن", progress: 0.0),
         DailyProgressData(name: "الثلاثاء", shortName: "ث", progress: 0.0),
-        DailyProgressData(name: "الأربعاء", shortName: "ر", progress: 0.0, isToday: true),
+        DailyProgressData(
+            name: "الأربعاء", shortName: "ر", progress: 0.0, isToday: true),
         DailyProgressData(name: "الخميس", shortName: "خ", progress: 0.0),
         DailyProgressData(name: "الجمعة", shortName: "ج", progress: 0.0),
       ];
     }
-    
+
     // Get days of the week in Arabic
-    final dayNames = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+    final dayNames = [
+      "الأحد",
+      "الإثنين",
+      "الثلاثاء",
+      "الأربعاء",
+      "الخميس",
+      "الجمعة",
+      "السبت"
+    ];
     final dayShortNames = ["ح", "ن", "ث", "ر", "خ", "ج", "س"];
-    
+
     return List.generate(7, (index) {
       // Calculate the date (starting from Sunday)
       final day = now.subtract(Duration(days: now.weekday - index));
-      
+
       // Check if we have progress for this day
       final dailyProgress = user.dailyProgress.firstWhere(
-        (p) => p.date.year == day.year && p.date.month == day.month && p.date.day == day.day,
-        orElse: () => DailyProgress(
-          date: day, 
-          progress: 0.0, 
-          completedVerses: 0, 
-          targetVerses: 10
-        )
-      );
-      
+          (p) =>
+              p.date.year == day.year &&
+              p.date.month == day.month &&
+              p.date.day == day.day,
+          orElse: () => DailyProgress(
+              date: day, progress: 0.0, completedVerses: 0, targetVerses: 10));
+
       return DailyProgressData(
         name: dayNames[index % 7],
         shortName: dayShortNames[index % 7],
         progress: dailyProgress.progress,
-        isToday: day.year == now.year && day.month == now.month && day.day == now.day,
+        isToday: day.year == now.year &&
+            day.month == now.month &&
+            day.day == now.day,
       );
     });
   }
-  
+
   // Build activities from recent sessions - no sample data for first launch
   List<ActivityItem> _buildActivitiesFromRecentSessions(BuildContext context) {
-    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
     final recentSessions = sessionProvider.recentSessions;
-    
+
     if (recentSessions.isEmpty) {
       // Return empty list if no sessions
       return [];
     }
-    
+
     final result = <ActivityItem>[];
-    
+
     for (final session in recentSessions) {
       ActivityType activityType;
       IconData icon;
-      
+
       switch (session.type) {
         case SessionType.newMemorization:
           activityType = ActivityType.memorization;
@@ -662,10 +725,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           icon = Icons.refresh;
           break;
       }
-      
+
       final now = DateTime.now();
       final diff = now.difference(session.timestamp);
-      
+
       String timeAgo;
       if (diff.inMinutes < 60) {
         timeAgo = "منذ ${diff.inMinutes} دقيقة";
@@ -674,20 +737,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       } else {
         timeAgo = "منذ ${diff.inDays} يوم";
       }
-      
+
       String description;
       switch (session.type) {
         case SessionType.newMemorization:
-          description = "حفظت ${session.verseCount} آية بجودة ${(session.quality * 100).round()}٪";
+          description =
+              "حفظت ${session.verseCount} آية بجودة ${(session.quality * 100).round()}٪";
           break;
         case SessionType.recentReview:
-          description = "راجعت ${session.verseCount} آية حديثة بجودة ${(session.quality * 100).round()}٪";
+          description =
+              "راجعت ${session.verseCount} آية حديثة بجودة ${(session.quality * 100).round()}٪";
           break;
         case SessionType.oldReview:
-          description = "راجعت ${session.verseCount} آية سابقة بجودة ${(session.quality * 100).round()}٪";
+          description =
+              "راجعت ${session.verseCount} آية سابقة بجودة ${(session.quality * 100).round()}٪";
           break;
       }
-      
+
       result.add(ActivityItem(
         type: activityType,
         surah: session.surahName,
@@ -697,14 +763,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         icon: icon,
       ));
     }
-    
+
     return result;
   }
-  
+
   // Build achievements from statistics - only for users with real achievements
-  List<AchievementItem> _buildAchievementsFromStats(StatisticsProvider statsProvider) {
+  List<AchievementItem> _buildAchievementsFromStats(
+      StatisticsProvider statsProvider) {
     final achievements = <AchievementItem>[];
-    
+
     // Only add achievements if they're actually earned
     if (statsProvider.currentStreak > 0) {
       achievements.add(AchievementItem(
@@ -712,24 +779,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         icon: Icons.emoji_events,
       ));
     }
-    
+
     if (statsProvider.memorizedVerses > 0) {
       achievements.add(AchievementItem(
         title: "${statsProvider.memorizedVerses} آية محفوظة",
         icon: Icons.menu_book,
       ));
     }
-    
+
     if (statsProvider.totalReviews > 0) {
       achievements.add(AchievementItem(
         title: "${statsProvider.totalReviews} مراجعة",
         icon: Icons.refresh,
       ));
     }
-    
+
     return achievements;
   }
-  
+
   // Show focus detail dialog
   void _showFocusDetailDialog(BuildContext context) {
     showModalBottomSheet(
@@ -759,10 +826,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       // For first-time users, just show Al-Fatiha
                       final user = Provider.of<SettingsProvider>(context).user;
                       final isFirstTime = _isFirstTimeUser(user);
-                      
+
                       if (isFirstTime) {
                         // Get Surahs to display correct Al-Fatiha information
-                        final surahs = Provider.of<QuranProvider>(context, listen: false).surahs;
+                        final surahs =
+                            Provider.of<QuranProvider>(context, listen: false)
+                                .surahs;
                         Surah? fatiha;
                         try {
                           fatiha = surahs.firstWhere((s) => s.id == 1);
@@ -775,7 +844,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             verseCount: 7,
                           );
                         }
-                        
+
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -784,12 +853,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                             const SizedBox(height: 12),
-                            
                             Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                border: Border.all(color: AppColors.primaryLight),
+                                border:
+                                    Border.all(color: AppColors.primaryLight),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Column(
@@ -804,7 +873,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                   ),
                                   Text(
                                     "${fatiha.arabicName} 1-${fatiha.verseCount}",
-                                    style: Theme.of(context).textTheme.titleMedium,
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
@@ -814,25 +884,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                   ElevatedButton(
                                     onPressed: () {
                                       Navigator.pop(context);
-                                      
+
                                       // Start session
-                                      final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
-                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      final sessionProvider =
+                                          Provider.of<SessionProvider>(context,
+                                              listen: false);
+                                      WidgetsBinding.instance
+                                          .addPostFrameCallback((_) {
                                         sessionProvider.startNewSession(
                                           surahId: 1,
                                           type: SessionType.newMemorization,
                                         );
-                                        
+
                                         // Update verse range
-                                        sessionProvider.updateSessionVerseRange(1, fatiha!.verseCount);
-                                        
+                                        sessionProvider.updateSessionVerseRange(
+                                            1, fatiha!.verseCount);
+
                                         // Show modal
                                         showModalBottomSheet(
                                           context: context,
                                           isScrollControlled: true,
                                           backgroundColor: Colors.transparent,
                                           isDismissible: false,
-                                          builder: (context) => const AddSessionModal(),
+                                          builder: (context) =>
+                                              const AddSessionModal(),
                                         );
                                       });
                                     },
@@ -847,12 +922,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ],
                         );
                       }
-                      
+
                       // Regular schedule for non-first-time users
                       if (provider.weekSchedule.isNotEmpty) {
                         final todaySchedule = provider.weekSchedule.first;
-                        final surahs = Provider.of<QuranProvider>(context, listen: false).surahs;
-                        
+                        final surahs =
+                            Provider.of<QuranProvider>(context, listen: false)
+                                .surahs;
+
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -861,13 +938,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                             const SizedBox(height: 12),
-                            
                             ...todaySchedule.sessions.map((session) {
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  border: Border.all(color: AppColors.primaryLight),
+                                  border:
+                                      Border.all(color: AppColors.primaryLight),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Column(
@@ -882,7 +959,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                     ),
                                     Text(
                                       "${_getSurahDisplayName(session.surahId, surahs)} ${session.verseRange}",
-                                      style: Theme.of(context).textTheme.titleMedium,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
@@ -892,35 +971,44 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                     ElevatedButton(
                                       onPressed: () {
                                         Navigator.pop(context);
-                                        
+
                                         // Start session
-                                        final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
-                                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        final sessionProvider =
+                                            Provider.of<SessionProvider>(
+                                                context,
+                                                listen: false);
+                                        WidgetsBinding.instance
+                                            .addPostFrameCallback((_) {
                                           sessionProvider.startNewSession(
                                             surahId: session.surahId,
-                                            type: _convertScheduleSessionTypeToSessionType(session.type),
+                                            type:
+                                                _convertScheduleSessionTypeToSessionType(
+                                                    session.type),
                                           );
-                                          
+
                                           // Update verse range
-                                          sessionProvider.updateSessionVerseRange(
+                                          sessionProvider
+                                              .updateSessionVerseRange(
                                             session.startVerse,
                                             session.endVerse,
                                           );
-                                          
+
                                           // Show modal
                                           showModalBottomSheet(
                                             context: context,
                                             isScrollControlled: true,
                                             backgroundColor: Colors.transparent,
                                             isDismissible: false,
-                                            builder: (context) => const AddSessionModal(),
+                                            builder: (context) =>
+                                                const AddSessionModal(),
                                           );
                                         });
                                       },
                                       style: ElevatedButton.styleFrom(
                                         minimumSize: const Size.fromHeight(40),
                                       ),
-                                      child: Text(_getSessionButtonText(session.type)),
+                                      child: Text(
+                                          _getSessionButtonText(session.type)),
                                     ),
                                   ],
                                 ),
@@ -951,7 +1039,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     );
   }
-  
+
   String _getSessionTypeText(ScheduleProvider.SessionType type) {
     switch (type) {
       case ScheduleProvider.SessionType.newMemorization:
@@ -962,7 +1050,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         return 'مراجعة سابقة';
     }
   }
-  
+
   String _getSessionButtonText(ScheduleProvider.SessionType type) {
     switch (type) {
       case ScheduleProvider.SessionType.newMemorization:
@@ -972,9 +1060,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         return 'بدء المراجعة';
     }
   }
-  
+
   // Helper method to convert between SessionType from different providers
-  SessionType _convertScheduleSessionTypeToSessionType(ScheduleProvider.SessionType scheduleType) {
+  SessionType _convertScheduleSessionTypeToSessionType(
+      ScheduleProvider.SessionType scheduleType) {
     switch (scheduleType) {
       case ScheduleProvider.SessionType.newMemorization:
         return SessionType.newMemorization;
