@@ -399,6 +399,24 @@ class MemorizationService {
   }
 
   /// Get due verse sets for today
+  Future<List<VerseSet>> getDueVerseSets() async {
+    final surahs = await getSurahsWithProgress();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final dueSets = <VerseSet>[];
+
+    for (final surah in surahs) {
+      for (final set in surah.verseSets) {
+        if (set.nextReviewDate != null && !set.nextReviewDate!.isAfter(today)) {
+          dueSets.add(set);
+        }
+      }
+    }
+
+    return dueSets;
+  }
+
   /// Check if Al-Fatiha is fully memorized
   bool _isAlFatihaMemorized(List<Surah> surahs) {
     try {
@@ -604,83 +622,94 @@ class MemorizationService {
       final date = today.add(Duration(days: i));
       final dueSessions = <ScheduledSession>[];
 
-      // For the next day (tomorrow), always include Al-Fatiha review if it's memorized
-      if (i == 1 && alFatihaMemorized) {
-        dueSessions.add(ScheduledSession(
-          surahId: 1,
-          surahName: "الفاتحة",
-          startVerse: 1,
-          endVerse: 7,
-          type: SessionType.recentReview,
-          isCompleted: false,
-          dueDate: date,
-        ));
+      // For the next day (tomorrow), limit tasks to max 2 key tasks
+      if (i == 1) {
+        // FIXED: Limit tomorrow's tasks to be more manageable
+        // If Al-Fatiha is memorized, show Al-Fatiha review and one Al-Baqarah task
+        if (alFatihaMemorized) {
+          // Include Al-Fatiha review
+          dueSessions.add(ScheduledSession(
+            surahId: 1,
+            surahName: "الفاتحة",
+            startVerse: 1,
+            endVerse: 7,
+            type: SessionType.recentReview,
+            isCompleted: false,
+            dueDate: date,
+          ));
 
-        // Also include Al-Baqarah for new memorization
-        dueSessions.add(ScheduledSession(
-          surahId: 2,
-          surahName: "البقرة",
-          startVerse: 1,
-          endVerse: 10,
-          // First 10 verses of Al-Baqarah
-          type: SessionType.newMemorization,
-          isCompleted: false,
-          dueDate: date,
-        ));
-      } else if (i == 1 && !alFatihaMemorized) {
-        // If Al-Fatiha is not memorized, schedule it for tomorrow
-        dueSessions.add(ScheduledSession(
-          surahId: 1,
-          surahName: "الفاتحة",
-          startVerse: 1,
-          endVerse: 7,
-          type: SessionType.newMemorization,
-          isCompleted: false,
-          dueDate: date,
-        ));
-      }
+          // Include only one Al-Baqarah task
+          dueSessions.add(ScheduledSession(
+            surahId: 2,
+            surahName: "البقرة",
+            startVerse: 1,
+            endVerse: 10, 
+            type: SessionType.newMemorization,
+            isCompleted: false,
+            dueDate: date,
+          ));
+        } else {
+          // If Al-Fatiha is not memorized, just schedule it for tomorrow
+          dueSessions.add(ScheduledSession(
+            surahId: 1,
+            surahName: "الفاتحة",
+            startVerse: 1,
+            endVerse: 7,
+            type: SessionType.newMemorization,
+            isCompleted: false,
+            dueDate: date,
+          ));
+        }
+      } else {
+        // For other days, find relevant tasks but keep it minimal
+        int taskCount = 0;
+        final maxTasksPerDay = 2; // Limit to 2 tasks max for other days
 
-      // Find all additional sets due on this date from verse sets
-      for (final surah in surahs) {
-        // Skip if we're controlling tasks manually
-        if (i == 1) continue;
+        // Find all sets due on this date from verse sets
+        for (final surah in surahs) {
+          if (taskCount >= maxTasksPerDay) break;
+          
+          for (final set in surah.verseSets) {
+            if (taskCount >= maxTasksPerDay) break;
+            
+            if (set.nextReviewDate != null) {
+              final nextReviewDate = set.nextReviewDate!;
+              final reviewDay = DateTime(
+                  nextReviewDate.year, nextReviewDate.month, nextReviewDate.day);
 
-        for (final set in surah.verseSets) {
-          if (set.nextReviewDate != null) {
-            final nextReviewDate = set.nextReviewDate!;
-            final reviewDay = DateTime(
-                nextReviewDate.year, nextReviewDate.month, nextReviewDate.day);
+              if (reviewDay.isAtSameMomentAs(date)) {
+                // Determine the session type based on repetition count
+                SessionType sessionType;
+                if (set.status == MemorizationStatus.notStarted) {
+                  sessionType = SessionType.newMemorization;
+                } else if (set.repetitionCount <= 2) {
+                  sessionType = SessionType.recentReview;
+                } else {
+                  sessionType = SessionType.oldReview;
+                }
 
-            if (reviewDay.isAtSameMomentAs(date)) {
-              // Determine the session type based on repetition count
-              SessionType sessionType;
-              if (set.status == MemorizationStatus.notStarted) {
-                sessionType = SessionType.newMemorization;
-              } else if (set.repetitionCount <= 2) {
-                sessionType = SessionType.recentReview;
-              } else {
-                sessionType = SessionType.oldReview;
+                // Find the surah name
+                final surahName = surahs
+                    .firstWhere((s) => s.id == set.surahId,
+                        orElse: () => const Surah(
+                            id: 0,
+                            name: "Unknown",
+                            arabicName: "غير معروف",
+                            verseCount: 0))
+                    .arabicName;
+
+                dueSessions.add(ScheduledSession(
+                  surahId: set.surahId,
+                  surahName: surahName,
+                  startVerse: set.startVerse,
+                  endVerse: set.endVerse,
+                  type: sessionType,
+                  isCompleted: false,
+                  dueDate: set.nextReviewDate,
+                ));
+                
+                taskCount++;
               }
-
-              // Find the surah name
-              final surahName = surahs
-                  .firstWhere((s) => s.id == set.surahId,
-                      orElse: () => const Surah(
-                          id: 0,
-                          name: "Unknown",
-                          arabicName: "غير معروف",
-                          verseCount: 0))
-                  .arabicName;
-
-              dueSessions.add(ScheduledSession(
-                surahId: set.surahId,
-                surahName: surahName,
-                startVerse: set.startVerse,
-                endVerse: set.endVerse,
-                type: sessionType,
-                isCompleted: false,
-                dueDate: set.nextReviewDate,
-              ));
             }
           }
         }
@@ -694,24 +723,6 @@ class MemorizationService {
     }
 
     return weekSchedule;
-  }
-
-  Future<List<VerseSet>> getDueVerseSets() async {
-    final surahs = await getSurahsWithProgress();
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    final dueSets = <VerseSet>[];
-
-    for (final surah in surahs) {
-      for (final set in surah.verseSets) {
-        if (set.nextReviewDate != null && !set.nextReviewDate!.isAfter(today)) {
-          dueSets.add(set);
-        }
-      }
-    }
-
-    return dueSets;
   }
 
   /// Update user statistics after a memorization session

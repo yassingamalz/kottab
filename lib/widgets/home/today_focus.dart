@@ -263,12 +263,15 @@ class _TodayFocusState extends State<TodayFocus>
     );
   }
 
-  // FIXED: Show all tomorrow's tasks, not just the first one
+  // FIXED: Only show a maximum of 2 tasks for tomorrow
   Widget _buildTomorrowPreview(
       BuildContext context, schedule_provider.DaySchedule tomorrowSchedule) {
     if (tomorrowSchedule.sessions.isEmpty) {
       return const SizedBox.shrink();
     }
+
+    // Limit to max 2 tasks for tomorrow
+    final limitedSessions = tomorrowSchedule.sessions.take(2).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -298,8 +301,8 @@ class _TodayFocusState extends State<TodayFocus>
 
         const SizedBox(height: 12),
 
-        // Show ALL sessions for tomorrow, not just the first one
-        ...tomorrowSchedule.sessions.map((session) {
+        // Show limited sessions for tomorrow
+        ...limitedSessions.map((session) {
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(12),
